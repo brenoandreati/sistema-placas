@@ -20,7 +20,7 @@
     "postinstall": "prisma generate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "cf:build": "CF_WORKERS_BUILD=1 opennextjs-cloudflare build",
+    "cf:build": "CF_WORKERS_BUILD=1 opennextjs-cloudflare build && node scripts/cf-strip-env.mjs",
     "cf:preview": "npm run cf:build && opennextjs-cloudflare preview",
     "cf:deploy": "npm run cf:build && opennextjs-cloudflare deploy"
   },

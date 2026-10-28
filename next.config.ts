@@ -21,6 +21,17 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./node_modules/pg-cloudflare/dist/**", "./node_modules/pg-cloudflare/esm/**"],
   },
+  // O carregador de WASM do Turbopack faz o rastreamento incluir o projeto inteiro, e o OpenNext empacota todo
+  // `.wasm` rastreado (CLI do Prisma, pglite...: +15 MiB). O único WASM usado em produção é o compilador de
+  // consultas do Prisma, emitido como chunk em `.next/server/chunks`. O app não usa `next/og`; sem ele no
+  // rastreamento, o OpenNext também deixa a biblioteca de fora.
+  ...(workersBuild
+    ? {
+        outputFileTracingExcludes: {
+          "/**": ["./node_modules/**/*.wasm", "./node_modules/next/dist/compiled/@vercel/og/**"],
+        },
+      }
+    : {}),
   turbopack: {
     ...(workersBuild
       ? {

@@ -9,6 +9,9 @@
     "binding": "ASSETS",
   },
   "observability": { "enabled": true },
+  // Executa o Worker perto do banco (Neon em São Paulo): cada requisição faz várias idas e voltas ao PostgreSQL.
+  // Ajuste a região se o banco estiver em outro lugar.
+  "placement": { "mode": "targeted", "region": "aws:sa-east-1" },
   "vars": {
     "SESSION_TTL_HOURS": "12",
   },
