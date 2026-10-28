@@ -1,0 +1,608 @@
+// Modelo de dados do sistema de gestão de placas NFC.
+//
+// Convenções:
+// - Tabelas e colunas em snake_case (via @@map/@map) para facilitar SQL e relatórios.
+// - Valores monetários em NUMERIC(14,2); custos unitários em NUMERIC(14,4) (custo médio ponderado).
+// - Datas e horários em timestamptz (UTC). O fuso do negócio é aplicado na apresentação e nos filtros.
+// - Registros financeiros, pagamentos, movimentações de estoque e auditoria são imutáveis
+//   (protegidos por triggers na migração). Correções acontecem por lançamentos compensatórios.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Usuários e sessões ─────────────────────────────
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+  VIEWER
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         UserRole  @default(ADMIN)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sessions  Session[]
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Session {
+  /// Hash SHA-256 do token entregue no cookie. O token em si nunca é armazenado.
+  id        String   @id
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LoginAttempt {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String
+  ipAddress String?  @map("ip_address")
+  success   Boolean
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("login_attempts")
+}
+
+// ───────────────────────────── Configurações ─────────────────────────────
+
+model Settings {
+  /// Registro único (singleton).
+  id                     Int       @id @default(1)
+  businessName           String    @default("") @map("business_name")
+  displayName            String    @default("Placas NFC") @map("display_name")
+  currency               String    @default("BRL")
+  timezone               String    @default("America/Sao_Paulo")
+  defaultSalePrice       Decimal?  @map("default_sale_price") @db.Decimal(14, 2)
+  defaultMinStock        Int       @default(10) @map("default_min_stock")
+  /// Prazo padrão (dias) de vencimento para vendas não pagas no ato.
+  defaultDueDays         Int       @default(7) @map("default_due_days")
+  /// Janela (dias) usada pelo alerta de retiradas recentes.
+  recentWithdrawalDays   Int       @default(7) @map("recent_withdrawal_days")
+  dashboardDefaultPeriod String    @default("30d") @map("dashboard_default_period")
+  pageSize               Int       @default(20) @map("page_size")
+  /// Quando verdadeiro, retiradas acima do saldo são aceitas mediante justificativa.
+  allowNegativeBalance   Boolean   @default(false) @map("allow_negative_balance")
+  setupCompletedAt       DateTime? @map("setup_completed_at") @db.Timestamptz(3)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("settings")
+}
+
+// ───────────────────────────── Produtos e estoque ─────────────────────────────
+
+model Product {
+  id               String   @id @default(uuid()) @db.Uuid
+  name             String
+  sku              String   @unique
+  description      String?
+  category         String?
+  salePrice        Decimal  @map("sale_price") @db.Decimal(14, 2)
+  /// Custo médio ponderado das unidades em estoque. Nulo = custo não informado.
+  averageCost      Decimal? @map("average_cost") @db.Decimal(14, 4)
+  lastPurchaseCost Decimal? @map("last_purchase_cost") @db.Decimal(14, 4)
+  /// Saldo atual. Só é alterado junto de uma movimentação de estoque (mesma transação).
+  currentStock     Int      @default(0) @map("current_stock")
+  minStock         Int      @default(0) @map("min_stock")
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  stockMovements StockMovement[]
+  stockEntries   StockEntry[]
+  saleItems      SaleItem[]
+
+  @@index([active])
+  @@map("products")
+}
+
+enum StockMovementType {
+  ENTRY
+  SALE
+  SALE_RETURN
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+}
+
+/// Entrada de mercadoria (compra/recebimento de placas).
+model StockEntry {
+  id              String    @id @default(uuid()) @db.Uuid
+  number          Int       @unique @default(autoincrement())
+  productId       String    @map("product_id") @db.Uuid
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity        Int
+  /// Custo unitário da compra. Nulo quando não informado.
+  unitCost        Decimal?  @map("unit_cost") @db.Decimal(14, 4)
+  totalCost       Decimal?  @map("total_cost") @db.Decimal(14, 2)
+  entryDate       DateTime  @map("entry_date") @db.Timestamptz(3)
+  supplier        String?
+  documentNumber  String?   @map("document_number")
+  notes           String?
+  /// Indica se o pagamento da compra saiu do caixa no momento do registro.
+  paidNow         Boolean   @default(false) @map("paid_now")
+  cashAccountId   String?   @map("cash_account_id") @db.Uuid
+  cashAccount     CashAccount? @relation(fields: [cashAccountId], references: [id], onDelete: Restrict)
+  paymentMethodId String?   @map("payment_method_id") @db.Uuid
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  idempotencyKey  String?   @unique @map("idempotency_key")
+  createdById     String    @map("created_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  movement              StockMovement?
+  financialTransactions FinancialTransaction[]
+
+  @@index([productId, entryDate])
+  @@map("stock_entries")
+}
+
+/// Histórico imutável de toda alteração de estoque.
+model StockMovement {
+  id               String            @id @default(uuid()) @db.Uuid
+  number           Int               @unique @default(autoincrement())
+  productId        String            @map("product_id") @db.Uuid
+  product          Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+  type             StockMovementType
+  /// Quantidade com sinal: positiva para entradas, negativa para saídas.
+  quantity         Int
+  balanceAfter     Int               @map("balance_after")
+  /// Custo unitário associado à movimentação (compra, ou custo médio na saída).
+  unitCost         Decimal?          @map("unit_cost") @db.Decimal(14, 4)
+  averageCostAfter Decimal?          @map("average_cost_after") @db.Decimal(14, 4)
+  reason           String?
+  notes            String?
+  saleId           String?           @map("sale_id") @db.Uuid
+  sale             Sale?             @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  saleItemId       String?           @map("sale_item_id") @db.Uuid
+  stockEntryId     String?           @unique @map("stock_entry_id") @db.Uuid
+  stockEntry       StockEntry?       @relation(fields: [stockEntryId], references: [id], onDelete: Restrict)
+  occurredAt       DateTime          @map("occurred_at") @db.Timestamptz(3)
+  createdById      String            @map("created_by_id") @db.Uuid
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([productId, occurredAt])
+  @@index([saleId])
+  @@index([occurredAt])
+  @@map("stock_movements")
+}
+
+// ───────────────────────────── Clientes ─────────────────────────────
+
+model Customer {
+  id                      String   @id @default(uuid()) @db.Uuid
+  businessName            String   @map("business_name")
+  contactName             String   @map("contact_name")
+  legalName               String?  @map("legal_name")
+  email                   String?
+  /// Somente dígitos (DDD + número).
+  phone                   String?
+  whatsapp                String?
+  segment                 String?
+  /// Somente dígitos.
+  cnpj                    String?  @unique
+  address                 String?
+  city                    String?
+  state                   String?
+  zipCode                 String?  @map("zip_code")
+  notes                   String?
+  googleReviewUrl         String?  @map("google_review_url")
+  publicPlaceName         String?  @map("public_place_name")
+  plateCustomizationNotes String?  @map("plate_customization_notes")
+  active                  Boolean  @default(true)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sales Sale[]
+
+  @@index([businessName])
+  @@index([email])
+  @@index([phone])
+  @@map("customers")
+}
+
+// ───────────────────────────── Vendas e pagamentos ─────────────────────────────
+
+enum SaleStatus {
+  REGISTERED
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum SalePaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+  /// Venda cancelada sem nenhum valor recebido.
+  CANCELLED
+}
+
+model Sale {
+  id                   String            @id @default(uuid()) @db.Uuid
+  number               Int               @unique @default(autoincrement())
+  customerId           String            @map("customer_id") @db.Uuid
+  customer             Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  saleDate             DateTime          @map("sale_date") @db.Timestamptz(3)
+  status               SaleStatus        @default(REGISTERED)
+  paymentStatus        SalePaymentStatus @default(PENDING) @map("payment_status")
+  /// Forma de pagamento combinada com o cliente.
+  paymentMethodId      String            @map("payment_method_id") @db.Uuid
+  paymentMethod        PaymentMethod     @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  /// Σ quantidade × preço unitário (valor bruto dos produtos).
+  subtotal             Decimal           @db.Decimal(14, 2)
+  discount             Decimal           @default(0) @db.Decimal(14, 2)
+  shipping             Decimal           @default(0) @db.Decimal(14, 2)
+  /// subtotal − desconto + frete
+  total                Decimal           @db.Decimal(14, 2)
+  /// Valor líquido recebido (recebimentos − estornos). Mantido em sincronia com payments.
+  amountPaid           Decimal           @default(0) @map("amount_paid") @db.Decimal(14, 2)
+  amountRefunded       Decimal           @default(0) @map("amount_refunded") @db.Decimal(14, 2)
+  /// Custo das mercadorias vendidas (Σ custo dos itens com custo conhecido).
+  costOfGoods          Decimal           @default(0) @map("cost_of_goods") @db.Decimal(14, 2)
+  /// Falso quando algum item foi vendido sem custo de aquisição conhecido.
+  costComplete         Boolean           @default(true) @map("cost_complete")
+  dueDate              DateTime?         @map("due_date") @db.Date
+  trackingCode         String?           @map("tracking_code")
+  deliveryAddress      String?           @map("delivery_address")
+  expectedDeliveryDate DateTime?         @map("expected_delivery_date") @db.Date
+  deliveredAt          DateTime?         @map("delivered_at") @db.Timestamptz(3)
+  notes                String?
+  cancelledAt          DateTime?         @map("cancelled_at") @db.Timestamptz(3)
+  cancellationReason   String?           @map("cancellation_reason")
+  cancelledById        String?           @map("cancelled_by_id") @db.Uuid
+  idempotencyKey       String?           @unique @map("idempotency_key")
+  createdById          String            @map("created_by_id") @db.Uuid
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  items                 SaleItem[]
+  payments              Payment[]
+  stockMovements        StockMovement[]
+  expenses              Expense[]
+  financialTransactions FinancialTransaction[]
+
+  @@index([customerId])
+  @@index([saleDate])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([dueDate])
+  @@map("sales")
+}
+
+model SaleItem {
+  id               String   @id @default(uuid()) @db.Uuid
+  saleId           String   @map("sale_id") @db.Uuid
+  sale             Sale     @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  productId        String   @map("product_id") @db.Uuid
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity         Int
+  unitPrice        Decimal  @map("unit_price") @db.Decimal(14, 2)
+  total            Decimal  @db.Decimal(14, 2)
+  /// Custo médio do produto no momento da venda (nulo se desconhecido).
+  unitCost         Decimal? @map("unit_cost") @db.Decimal(14, 4)
+  totalCost        Decimal? @map("total_cost") @db.Decimal(14, 2)
+  /// Unidades devolvidas ao estoque em caso de cancelamento.
+  returnedQuantity Int      @default(0) @map("returned_quantity")
+
+  @@unique([saleId, productId])
+  @@index([productId])
+  @@map("sale_items")
+}
+
+enum PaymentKind {
+  RECEIPT
+  REFUND
+}
+
+/// Recebimentos e estornos vinculados a vendas. Imutável.
+model Payment {
+  id              String        @id @default(uuid()) @db.Uuid
+  number          Int           @unique @default(autoincrement())
+  saleId          String        @map("sale_id") @db.Uuid
+  sale            Sale          @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  kind            PaymentKind
+  amount          Decimal       @db.Decimal(14, 2)
+  paymentMethodId String        @map("payment_method_id") @db.Uuid
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  cashAccountId   String        @map("cash_account_id") @db.Uuid
+  cashAccount     CashAccount   @relation(fields: [cashAccountId], references: [id], onDelete: Restrict)
+  paidAt          DateTime      @map("paid_at") @db.Timestamptz(3)
+  notes           String?
+  /// Motivo obrigatório para estornos.
+  reason          String?
+  /// Para estornos: recebimento que está sendo estornado.
+  refundOfId      String?       @map("refund_of_id") @db.Uuid
+  refundOf        Payment?      @relation("PaymentRefunds", fields: [refundOfId], references: [id], onDelete: Restrict)
+  refunds         Payment[]     @relation("PaymentRefunds")
+  idempotencyKey  String?       @unique @map("idempotency_key")
+  createdById     String        @map("created_by_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  financialTransaction FinancialTransaction?
+
+  @@index([saleId])
+  @@index([paidAt])
+  @@map("payments")
+}
+
+enum PaymentMethodKind {
+  PIX
+  CASH
+  CARD
+  BANK_TRANSFER
+  OTHER
+}
+
+model PaymentMethod {
+  id        String            @id @default(uuid()) @db.Uuid
+  name      String            @unique
+  kind      PaymentMethodKind @default(OTHER)
+  active    Boolean           @default(true)
+  sortOrder Int               @default(0) @map("sort_order")
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  sales                 Sale[]
+  payments              Payment[]
+  stockEntries          StockEntry[]
+  withdrawals           Withdrawal[]
+  expenses              Expense[]
+  financialTransactions FinancialTransaction[]
+
+  @@map("payment_methods")
+}
+
+// ───────────────────────────── Financeiro ─────────────────────────────
+
+enum CashAccountType {
+  CASH
+  BANK
+  DIGITAL_WALLET
+}
+
+model CashAccount {
+  id                 String          @id @default(uuid()) @db.Uuid
+  name               String          @unique
+  type               CashAccountType @default(CASH)
+  openingBalance     Decimal         @default(0) @map("opening_balance") @db.Decimal(14, 2)
+  openingBalanceDate DateTime?       @map("opening_balance_date") @db.Date
+  isDefault          Boolean         @default(false) @map("is_default")
+  active             Boolean         @default(true)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  financialTransactions FinancialTransaction[]
+  payments              Payment[]
+  withdrawals           Withdrawal[]
+  expenses              Expense[]
+  stockEntries          StockEntry[]
+
+  @@map("cash_accounts")
+}
+
+enum TransactionDirection {
+  IN
+  OUT
+}
+
+enum FinancialCategoryGroup {
+  SALES_RECEIPT
+  SALES_REFUND
+  STOCK_PURCHASE
+  EXPENSE
+  WITHDRAWAL
+  CAPITAL_CONTRIBUTION
+  OTHER_INCOME
+}
+
+enum WithdrawalKind {
+  OWNER_DRAW
+  PROFIT_DISTRIBUTION
+  REIMBURSEMENT
+  OTHER
+}
+
+model FinancialCategory {
+  id             String                 @id @default(uuid()) @db.Uuid
+  name           String
+  group          FinancialCategoryGroup
+  direction      TransactionDirection
+  /// Despesa considerada custo diretamente atribuível às vendas (entra no lucro estimado).
+  isDirectCost   Boolean                @default(false) @map("is_direct_cost")
+  /// Natureza da retirada (apenas para o grupo WITHDRAWAL).
+  withdrawalKind WithdrawalKind?        @map("withdrawal_kind")
+  /// Categorias de sistema não podem ser removidas nem renomeadas.
+  systemKey      String?                @unique @map("system_key")
+  active         Boolean                @default(true)
+  sortOrder      Int                    @default(0) @map("sort_order")
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transactions FinancialTransaction[]
+  withdrawals  Withdrawal[]
+  expenses     Expense[]
+
+  @@unique([group, name])
+  @@map("financial_categories")
+}
+
+enum TransactionOrigin {
+  SALE_PAYMENT
+  SALE_REFUND
+  STOCK_PURCHASE
+  EXPENSE
+  WITHDRAWAL
+  CAPITAL_CONTRIBUTION
+  OTHER_INCOME
+  REVERSAL
+}
+
+/// Livro-caixa. Cada linha é um movimento confirmado e imutável.
+model FinancialTransaction {
+  id              String               @id @default(uuid()) @db.Uuid
+  number          Int                  @unique @default(autoincrement())
+  cashAccountId   String               @map("cash_account_id") @db.Uuid
+  cashAccount     CashAccount          @relation(fields: [cashAccountId], references: [id], onDelete: Restrict)
+  direction       TransactionDirection
+  amount          Decimal              @db.Decimal(14, 2)
+  categoryId      String               @map("category_id") @db.Uuid
+  category        FinancialCategory    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  origin          TransactionOrigin
+  description     String
+  paymentMethodId String?              @map("payment_method_id") @db.Uuid
+  paymentMethod   PaymentMethod?       @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  occurredAt      DateTime             @map("occurred_at") @db.Timestamptz(3)
+  notes           String?
+  /// Referências à origem (no máximo uma por natureza; garantem que nada seja contado duas vezes).
+  paymentId       String?              @unique @map("payment_id") @db.Uuid
+  payment         Payment?             @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  saleId          String?              @map("sale_id") @db.Uuid
+  sale            Sale?                @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  withdrawalId    String?              @map("withdrawal_id") @db.Uuid
+  withdrawal      Withdrawal?          @relation(fields: [withdrawalId], references: [id], onDelete: Restrict)
+  expenseId       String?              @map("expense_id") @db.Uuid
+  expense         Expense?             @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  stockEntryId    String?              @map("stock_entry_id") @db.Uuid
+  stockEntry      StockEntry?          @relation(fields: [stockEntryId], references: [id], onDelete: Restrict)
+  /// Lançamento compensatório: aponta para o movimento estornado (cada movimento só pode ser estornado uma vez).
+  reversalOfId    String?              @unique @map("reversal_of_id") @db.Uuid
+  reversalOf      FinancialTransaction?  @relation("TransactionReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal        FinancialTransaction?  @relation("TransactionReversal")
+  reversalReason  String?              @map("reversal_reason")
+  idempotencyKey  String?              @unique @map("idempotency_key")
+  createdById     String               @map("created_by_id") @db.Uuid
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([withdrawalId, origin])
+  @@unique([expenseId, origin])
+  @@unique([stockEntryId, origin])
+  @@index([cashAccountId, occurredAt])
+  @@index([occurredAt])
+  @@index([categoryId])
+  @@index([origin])
+  @@index([saleId])
+  @@map("financial_transactions")
+}
+
+enum RecordStatus {
+  ACTIVE
+  REVERSED
+}
+
+model Withdrawal {
+  id              String            @id @default(uuid()) @db.Uuid
+  number          Int               @unique @default(autoincrement())
+  cashAccountId   String            @map("cash_account_id") @db.Uuid
+  cashAccount     CashAccount       @relation(fields: [cashAccountId], references: [id], onDelete: Restrict)
+  categoryId      String            @map("category_id") @db.Uuid
+  category        FinancialCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  amount          Decimal           @db.Decimal(14, 2)
+  paymentMethodId String            @map("payment_method_id") @db.Uuid
+  paymentMethod   PaymentMethod     @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  withdrawnAt     DateTime          @map("withdrawn_at") @db.Timestamptz(3)
+  description     String
+  notes           String?
+  /// Saldo da conta imediatamente antes/depois do registro.
+  balanceBefore   Decimal           @map("balance_before") @db.Decimal(14, 2)
+  balanceAfter    Decimal           @map("balance_after") @db.Decimal(14, 2)
+  /// Justificativa exigida quando a retirada deixa o saldo negativo (se permitido).
+  negativeBalanceJustification String? @map("negative_balance_justification")
+  status          RecordStatus      @default(ACTIVE)
+  reversedAt      DateTime?         @map("reversed_at") @db.Timestamptz(3)
+  reversalReason  String?           @map("reversal_reason")
+  reversedById    String?           @map("reversed_by_id") @db.Uuid
+  idempotencyKey  String?           @unique @map("idempotency_key")
+  createdById     String            @map("created_by_id") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transactions FinancialTransaction[]
+
+  @@index([withdrawnAt])
+  @@index([categoryId])
+  @@map("withdrawals")
+}
+
+model Expense {
+  id              String            @id @default(uuid()) @db.Uuid
+  number          Int               @unique @default(autoincrement())
+  cashAccountId   String            @map("cash_account_id") @db.Uuid
+  cashAccount     CashAccount       @relation(fields: [cashAccountId], references: [id], onDelete: Restrict)
+  categoryId      String            @map("category_id") @db.Uuid
+  category        FinancialCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  amount          Decimal           @db.Decimal(14, 2)
+  description     String
+  paymentMethodId String?           @map("payment_method_id") @db.Uuid
+  paymentMethod   PaymentMethod?    @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict)
+  incurredAt      DateTime          @map("incurred_at") @db.Timestamptz(3)
+  supplier        String?
+  notes           String?
+  /// Custo vinculado a uma venda específica (opcional).
+  saleId          String?           @map("sale_id") @db.Uuid
+  sale            Sale?             @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  status          RecordStatus      @default(ACTIVE)
+  reversedAt      DateTime?         @map("reversed_at") @db.Timestamptz(3)
+  reversalReason  String?           @map("reversal_reason")
+  reversedById    String?           @map("reversed_by_id") @db.Uuid
+  idempotencyKey  String?           @unique @map("idempotency_key")
+  createdById     String            @map("created_by_id") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transactions FinancialTransaction[]
+
+  @@index([incurredAt])
+  @@index([categoryId])
+  @@map("expenses")
+}
+
+// ───────────────────────────── Auditoria ─────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  /// Ex.: sale.create, payment.refund, withdrawal.reverse
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  summary    String
+  reason     String?
+  before     Json?
+  after      Json?
+  /// Valores estruturados para o feed de atividades (amount, quantity, saleId...).
+  metadata   Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
