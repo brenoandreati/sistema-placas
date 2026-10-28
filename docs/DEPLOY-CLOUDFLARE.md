@@ -6,10 +6,10 @@ PostgreSQL gerenciado, então o banco fica em um provedor PostgreSQL (recomendad
 
 ## Requisitos
 
-- **Plano Workers Paid** (US$ 5/mês): o bundle comprimido tem ~3,4 MiB, acima do limite de 3 MiB do plano gratuito, e
-  as páginas precisam de mais CPU que os 10 ms do plano gratuito (páginas usam 30–300 ms; o login, com bcrypt,
-  ~600 ms). No plano gratuito o Cloudflare tolera o excesso por um tempo e depois passa a encerrar requisições com
-  `exceededCpu` (erro 503 aleatório, inclusive no login).
+- **Plano Workers Paid** (US$ 5/mês, inclui 10 milhões de requisições e 30 milhões de ms de CPU por mês): o plano
+  gratuito limita cada requisição a 10 ms de CPU, e as páginas usam 30–300 ms (o login, com bcrypt, ~600 ms). O
+  Cloudflare tolera o excesso por um tempo e depois encerra as requisições com o **Error 1102** ("Worker exceeded
+  resource limits"). O limite é por requisição: apagar outros Workers ou criar outra conta gratuita não resolve.
 - Um PostgreSQL 14+ acessível pela internet, com duas URLs:
   - `DATABASE_URL`: conexão **com pooler** (no Neon, o host com `-pooler`), usada pelo app;
   - `MIGRATION_DATABASE_URL`: conexão **direta**, usada só pelas migrations.
