@@ -148,7 +148,7 @@ async function SalesTab({ period, tz }: { period: Period; tz: string }) {
         {report.rows.length === 0 ? (
           <EmptyState title="Nenhuma venda no período" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-y border-line bg-surface-2/70">
                 <tr>
@@ -227,7 +227,7 @@ async function StockTab({ period }: { period: Period }) {
         {report.rows.length === 0 ? (
           <EmptyState title="Nenhum produto cadastrado" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-y border-line bg-surface-2/70">
                 <tr>
@@ -285,7 +285,7 @@ async function CustomersTab({ period }: { period: Period }) {
         {report.rows.length === 0 ? (
           <EmptyState title="Nenhum cliente comprou no período" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-y border-line bg-surface-2/70">
                 <tr>
@@ -363,7 +363,7 @@ async function FinanceTab({ period }: { period: Period }) {
         {report.categoryRows.length === 0 ? (
           <EmptyState title="Nenhum lançamento no período" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-y border-line bg-surface-2/70">
                 <tr>
@@ -435,7 +435,7 @@ async function WithdrawalsTab({ period, tz }: { period: Period; tz: string }) {
         {report.rows.length === 0 ? (
           <EmptyState title="Nenhuma retirada no período" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-y border-line bg-surface-2/70">
                 <tr>

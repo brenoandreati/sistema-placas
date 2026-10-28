@@ -5,12 +5,11 @@ import { Money } from "@/components/dashboard/kpi";
 import { PeriodSelector } from "@/components/dashboard/period-selector";
 import { PageHeader } from "@/components/page-header";
 import { QuickActionButton } from "@/components/quick-actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ClearFilters, SearchFilter, SelectFilter } from "@/components/ui/filters";
+import { ClearFilters, FilterBar, SearchFilter, SelectFilter } from "@/components/ui/filters";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/cn";
 import { formatDateString, formatDateTime, isPeriodPreset, resolvePeriod } from "@/lib/dates";
@@ -160,7 +159,7 @@ export default async function FinancePage({
         </div>
         <div className="bg-surface p-5">
           <p className="text-[13px] font-medium text-ink-2">Contas a receber</p>
-          <p className="tabular mt-2 font-display text-2xl font-semibold text-warning">
+          <p className="figure mt-2 font-display text-2xl font-semibold text-warning">
             {formatBRL(position.receivables.total)}
           </p>
           <Link href="/contas-a-receber" className="mt-1 block text-xs text-muted hover:text-ink">
@@ -170,7 +169,7 @@ export default async function FinancePage({
         </div>
         <div className="bg-surface p-5">
           <p className="text-[13px] font-medium text-ink-2">Saldo inicial</p>
-          <p className="tabular mt-2 font-display text-2xl font-semibold">{formatBRL(position.openingBalance)}</p>
+          <p className="figure mt-2 font-display text-2xl font-semibold">{formatBRL(position.openingBalance)}</p>
           {position.refundsDue.total > 0 ? (
             <p className="mt-1 text-xs text-warning">A devolver a clientes: {formatBRL(position.refundsDue.total)}</p>
           ) : (
@@ -198,7 +197,7 @@ export default async function FinancePage({
               <p className="text-xs text-muted">{c.label}</p>
               <p
                 className={cn(
-                  "tabular mt-1.5 font-display text-lg font-semibold",
+                  "figure mt-1.5 font-display text-lg font-semibold",
                   c.value === 0 ? "text-ink" : c.tone === "positive" ? "text-positive" : "text-negative",
                 )}
               >
@@ -214,9 +213,7 @@ export default async function FinancePage({
               <p className="text-[13px] font-medium text-ink-2">Resultado de caixa do período</p>
               <p className="text-xs text-muted">Entradas − saídas registradas no período</p>
             </div>
-            <p
-              className={cn("tabular font-display text-xl font-semibold", cash.net < 0 ? "text-negative" : "text-ink")}
-            >
+            <p className={cn("figure font-display text-xl font-semibold", cash.net < 0 ? "text-negative" : "text-ink")}>
               {formatBRL(cash.net)}
             </p>
           </div>
@@ -231,7 +228,7 @@ export default async function FinancePage({
             </div>
             <p
               className={cn(
-                "tabular font-display text-xl font-semibold",
+                "figure font-display text-xl font-semibold",
                 profit.profit < 0 ? "text-negative" : "text-ink",
               )}
             >
@@ -254,30 +251,31 @@ export default async function FinancePage({
             </Button>
           }
         />
-        <div className="flex flex-col gap-2 border-y border-line p-4 lg:flex-row lg:flex-wrap lg:items-center">
-          <SearchFilter placeholder="Buscar descrição ou nº MOV" className="lg:w-64" />
-          <div className="flex flex-wrap items-center gap-2">
-            <SelectFilter
-              param="tipo"
-              label="Entradas e saídas"
-              options={[
-                { value: "IN", label: "Somente entradas" },
-                { value: "OUT", label: "Somente saídas" },
-              ]}
-            />
-            <SelectFilter
-              param="categoria"
-              label="Todas as categorias"
-              options={categories.map((c) => ({ value: c.id, label: c.name }))}
-            />
-            <SelectFilter
-              param="origem"
-              label="Todas as origens"
-              options={ORIGINS.map((o) => ({ value: o, label: ORIGIN_LABELS[o] }))}
-            />
-            <ClearFilters params={["q", "tipo", "categoria", "origem"]} />
-          </div>
-        </div>
+        <FilterBar
+          className="border-t"
+          search={<SearchFilter placeholder="Buscar descrição ou nº MOV" className="lg:w-64" />}
+          params={["q", "tipo", "categoria", "origem"]}
+        >
+          <SelectFilter
+            param="tipo"
+            label="Entradas e saídas"
+            options={[
+              { value: "IN", label: "Somente entradas" },
+              { value: "OUT", label: "Somente saídas" },
+            ]}
+          />
+          <SelectFilter
+            param="categoria"
+            label="Todas as categorias"
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+          />
+          <SelectFilter
+            param="origem"
+            label="Todas as origens"
+            options={ORIGINS.map((o) => ({ value: o, label: ORIGIN_LABELS[o] }))}
+          />
+          <ClearFilters params={["q", "tipo", "categoria", "origem"]} />
+        </FilterBar>
         <DataTable<LedgerEntry>
           rows={ledger.items}
           rowKey={(t) => t.id}
@@ -306,6 +304,7 @@ export default async function FinancePage({
                   </span>
                   <span className="block text-xs text-muted">
                     <span className="font-mono">{formatRecordNumber("MOV", t.number)}</span> · {t.originLabel}
+                    {t.paymentMethod ? ` · ${t.paymentMethod}` : ""}
                     {t.reversalReason ? ` · ${t.reversalReason}` : ""}
                     {t.reversed ? " · estornado" : ""}
                   </span>
@@ -313,15 +312,6 @@ export default async function FinancePage({
               ),
             },
             { key: "cat", header: "Categoria", cell: (t) => <span className="text-ink-2">{t.category}</span> },
-            {
-              key: "type",
-              header: "Tipo",
-              cell: (t) => (
-                <Badge tone={t.direction === "IN" ? "positive" : "negative"}>
-                  {t.direction === "IN" ? "Entrada" : "Saída"}
-                </Badge>
-              ),
-            },
             {
               key: "amount",
               header: "Valor",
@@ -338,22 +328,17 @@ export default async function FinancePage({
               ),
             },
             {
-              key: "method",
-              header: "Forma",
-              cell: (t) => <span className="text-ink-2">{t.paymentMethod ?? "—"}</span>,
-            },
-            {
               key: "ref",
               header: "Referência",
               cell: (t) => {
                 if (!t.reference) return <span className="text-muted">—</span>;
                 const href = referenceHref(t.reference);
                 return href ? (
-                  <Link href={href} className="font-mono text-[13px] text-primary hover:underline">
+                  <Link href={href} className="font-mono text-[13px] whitespace-nowrap text-primary hover:underline">
                     {t.reference.label}
                   </Link>
                 ) : (
-                  <span className="font-mono text-[13px] text-ink-2">{t.reference.label}</span>
+                  <span className="font-mono text-[13px] whitespace-nowrap text-ink-2">{t.reference.label}</span>
                 );
               },
             },

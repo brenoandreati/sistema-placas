@@ -135,7 +135,7 @@ export default async function CustomerDetailPage({
         ].map((item) => (
           <div key={item.label} className="bg-surface px-4 py-3.5">
             <dt className="text-xs text-muted">{item.label}</dt>
-            <dd className={cn("tabular mt-1 font-display text-lg font-semibold tracking-tight", item.tone)}>
+            <dd className={cn("figure mt-1 font-display text-lg font-semibold tracking-tight", item.tone)}>
               {item.value}
             </dd>
           </div>
@@ -262,7 +262,7 @@ export default async function CustomerDetailPage({
           {detail.sales.length === 0 ? (
             <EmptyState title="Nenhuma compra registrada" />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line bg-surface-2/70 text-xs text-muted">

@@ -208,7 +208,8 @@ export function formatDateTime(date: Date | string, tz: string): string {
 }
 
 export function formatLongDate(date: Date, tz: string): string {
-  return format(new TZDate(date.getTime(), tz), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const label = format(new TZDate(date.getTime(), tz), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 export function formatBucketLabel(key: string, granularity: "day" | "month"): string {

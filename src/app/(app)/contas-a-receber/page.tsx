@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ClearFilters, DateRangeFilter, SearchFilter, SelectFilter } from "@/components/ui/filters";
+import { ClearFilters, DateRangeFilter, FilterBar, SearchFilter, SelectFilter } from "@/components/ui/filters";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/cn";
 import { formatDate, formatDateString, isDateString } from "@/lib/dates";
@@ -83,19 +83,19 @@ export default async function ReceivablesPage({
         ]}
       />
       <Card>
-        <div className="flex flex-col gap-2 border-b border-line p-4 lg:flex-row lg:flex-wrap lg:items-center">
-          <SearchFilter placeholder="Buscar cliente ou pedido" className="lg:w-64" />
-          <div className="flex flex-wrap items-center gap-2">
-            <SelectFilter
-              param="status"
-              label="Todos os vencimentos"
-              options={(Object.keys(STATUS) as ReceivableStatus[]).map((s) => ({ value: s, label: STATUS[s].label }))}
-            />
-            <span className="text-xs text-muted">Vencimento:</span>
-            <DateRangeFilter />
-            <ClearFilters params={["q", "status", "de", "ate", "cliente"]} />
-          </div>
-        </div>
+        <FilterBar
+          search={<SearchFilter placeholder="Buscar cliente ou pedido" className="lg:w-64" />}
+          params={["q", "status", "de", "ate", "cliente"]}
+        >
+          <SelectFilter
+            param="status"
+            label="Todos os vencimentos"
+            options={(Object.keys(STATUS) as ReceivableStatus[]).map((s) => ({ value: s, label: STATUS[s].label }))}
+          />
+          <span className="text-xs text-muted">Vencimento:</span>
+          <DateRangeFilter />
+          <ClearFilters params={["q", "status", "de", "ate", "cliente"]} />
+        </FilterBar>
         <DataTable<ReceivableItem>
           rows={result.items}
           rowKey={(r) => r.saleId}

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ClearFilters, DateRangeFilter, SearchFilter, SelectFilter } from "@/components/ui/filters";
+import { ClearFilters, DateRangeFilter, FilterBar, SearchFilter, SelectFilter } from "@/components/ui/filters";
 import { Pagination } from "@/components/ui/pagination";
 import { addDaysToDate, formatDate, isDateString, startOfLocalDay } from "@/lib/dates";
 import { formatBRL, formatInteger, formatPhone, whatsappLink } from "@/lib/format";
@@ -52,36 +52,38 @@ export default async function CustomersPage({
         actions={<NewCustomerButton />}
       />
       <Card>
-        <div className="flex flex-col gap-2 border-b border-line p-4 lg:flex-row lg:flex-wrap lg:items-center">
-          <SearchFilter placeholder="Buscar por negócio, responsável, telefone ou e-mail" className="lg:w-80" />
-          <div className="flex flex-wrap items-center gap-2">
-            <SelectFilter
-              param="compras"
-              label="Todos os clientes"
-              options={[
-                { value: "com", label: "Já compraram" },
-                { value: "sem", label: "Sem compras" },
-              ]}
-            />
-            <SelectFilter
-              param="ordem"
-              label="Ordenar por nome"
-              options={[
-                { value: "recent", label: "Compra mais recente" },
-                { value: "total", label: "Maior valor comprado" },
-                { value: "created", label: "Cadastro mais recente" },
-              ]}
-            />
-            <SelectFilter
-              param="inativos"
-              label="Somente ativos"
-              options={[{ value: "1", label: "Incluir desativados" }]}
-            />
-            <span className="text-xs text-muted">Última compra:</span>
-            <DateRangeFilter />
-            <ClearFilters params={["q", "compras", "ordem", "inativos", "de", "ate"]} />
-          </div>
-        </div>
+        <FilterBar
+          search={
+            <SearchFilter placeholder="Buscar por negócio, responsável, telefone ou e-mail" className="lg:w-80" />
+          }
+          params={["q", "compras", "ordem", "inativos", "de", "ate"]}
+        >
+          <SelectFilter
+            param="compras"
+            label="Todos os clientes"
+            options={[
+              { value: "com", label: "Já compraram" },
+              { value: "sem", label: "Sem compras" },
+            ]}
+          />
+          <SelectFilter
+            param="ordem"
+            label="Ordenar por nome"
+            options={[
+              { value: "recent", label: "Compra mais recente" },
+              { value: "total", label: "Maior valor comprado" },
+              { value: "created", label: "Cadastro mais recente" },
+            ]}
+          />
+          <SelectFilter
+            param="inativos"
+            label="Somente ativos"
+            options={[{ value: "1", label: "Incluir desativados" }]}
+          />
+          <span className="text-xs text-muted">Última compra:</span>
+          <DateRangeFilter />
+          <ClearFilters params={["q", "compras", "ordem", "inativos", "de", "ate"]} />
+        </FilterBar>
         <DataTable<CustomerListItem>
           rows={result.items}
           rowKey={(c) => c.id}

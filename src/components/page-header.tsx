@@ -44,7 +44,7 @@ export function StatStrip({
           <dt className="text-xs text-muted">{item.label}</dt>
           <dd
             className={cn(
-              "tabular mt-1 font-display text-lg font-semibold tracking-tight",
+              "figure mt-1 font-display text-lg font-semibold tracking-tight",
               item.tone === "positive" && "text-positive",
               item.tone === "negative" && "text-negative",
               item.tone === "warning" && "text-warning",

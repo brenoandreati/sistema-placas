@@ -277,8 +277,8 @@ export default async function DashboardPage({
         </Card>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="min-w-0 xl:col-span-2">
           <SalesChart points={series.points} granularity={series.granularity} />
         </div>
         <Card className="flex flex-col">
@@ -292,12 +292,12 @@ export default async function DashboardPage({
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <UnitsChart points={series.points} />
         <CashFlowChart points={series.points} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader title="Comparativo com o período anterior" description={`${previous.label}`} />
           <div className="overflow-x-auto px-5 pb-4">

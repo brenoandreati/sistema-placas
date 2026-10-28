@@ -97,6 +97,7 @@ export function SalesChart({ points, granularity }: { points: SeriesPoint[]; gra
               }
             />
             <Area
+              isAnimationActive={false}
               type="monotone"
               dataKey="salesTotal"
               name="Vendido"
@@ -107,6 +108,7 @@ export function SalesChart({ points, granularity }: { points: SeriesPoint[]; gra
               activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
             />
             <Line
+              isAnimationActive={false}
               type="monotone"
               dataKey="received"
               name="Recebido"
@@ -148,7 +150,14 @@ export function UnitsChart({ points }: { points: SeriesPoint[] }) {
                 ) : null
               }
             />
-            <Bar dataKey="units" name="Placas" fill={C.sold} radius={[4, 4, 0, 0]} maxBarSize={24} />
+            <Bar
+              isAnimationActive={false}
+              dataKey="units"
+              name="Placas"
+              fill={C.sold}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={24}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -198,9 +207,25 @@ export function CashFlowChart({ points }: { points: SeriesPoint[] }) {
                 );
               }}
             />
-            <Bar dataKey="inflows" stackId="cash" fill={C.in} radius={[4, 4, 0, 0]} maxBarSize={24} />
-            <Bar dataKey="expensesNeg" stackId="cash" fill={C.expense} maxBarSize={24} stroke="#fff" strokeWidth={1} />
             <Bar
+              isAnimationActive={false}
+              dataKey="inflows"
+              stackId="cash"
+              fill={C.in}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={24}
+            />
+            <Bar
+              isAnimationActive={false}
+              dataKey="expensesNeg"
+              stackId="cash"
+              fill={C.expense}
+              maxBarSize={24}
+              stroke="#fff"
+              strokeWidth={1}
+            />
+            <Bar
+              isAnimationActive={false}
               dataKey="withdrawalsNeg"
               stackId="cash"
               fill={C.withdrawal}

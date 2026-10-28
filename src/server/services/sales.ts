@@ -1018,7 +1018,7 @@ export async function getSaleDetail(saleId: string, tz: string): Promise<SaleDet
     amountRefunded: num(sale.amountRefunded),
     costOfGoods: num(sale.costOfGoods),
     costComplete: sale.costComplete,
-    grossProfit: sale.costComplete ? num(netRevenue.sub(dec(sale.costOfGoods))) : null,
+    grossProfit: sale.costComplete && sale.status !== "CANCELLED" ? num(netRevenue.sub(dec(sale.costOfGoods))) : null,
     trackingCode: sale.trackingCode,
     deliveryAddress: sale.deliveryAddress,
     expectedDeliveryDate: sale.expectedDeliveryDate ? dbDateToString(sale.expectedDeliveryDate) : null,

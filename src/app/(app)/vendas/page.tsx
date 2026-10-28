@@ -7,7 +7,7 @@ import { PaymentStatusBadge, SaleStatusBadge } from "@/components/status";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ClearFilters, DateRangeFilter, SearchFilter, SelectFilter } from "@/components/ui/filters";
+import { ClearFilters, DateRangeFilter, FilterBar, SearchFilter, SelectFilter } from "@/components/ui/filters";
 import { Pagination } from "@/components/ui/pagination";
 import { addDaysToDate, formatDate, isDateString, startOfLocalDay } from "@/lib/dates";
 import { formatBRL, formatInteger, formatOrderNumber, isUuid } from "@/lib/format";
@@ -100,29 +100,29 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       )}
 
       <Card>
-        <div className="flex flex-col gap-2 border-b border-line p-4 lg:flex-row lg:flex-wrap lg:items-center">
-          <SearchFilter placeholder="Buscar por pedido, cliente ou negócio" className="lg:w-72" />
-          <div className="flex flex-wrap items-center gap-2">
-            <SelectFilter
-              param="status"
-              label="Status da venda"
-              options={SALE_STATUSES.map((s) => ({ value: s, label: statusLabel(s) }))}
-            />
-            <SelectFilter
-              param="pagamento"
-              label="Status financeiro"
-              options={PAYMENT_STATUSES.map((s) => ({ value: s, label: paymentLabel(s) }))}
-            />
-            <SelectFilter
-              param="forma"
-              label="Forma de pagamento"
-              options={methods.map((m) => ({ value: m.id, label: m.name }))}
-            />
-            <DateRangeFilter />
-            <ValueRangeFilter />
-            <ClearFilters params={["q", "status", "pagamento", "forma", "de", "ate", "min", "max", "cliente"]} />
-          </div>
-        </div>
+        <FilterBar
+          search={<SearchFilter placeholder="Buscar por pedido, cliente ou negócio" className="lg:w-72" />}
+          params={["q", "status", "pagamento", "forma", "de", "ate", "min", "max", "cliente"]}
+        >
+          <SelectFilter
+            param="status"
+            label="Status da venda"
+            options={SALE_STATUSES.map((s) => ({ value: s, label: statusLabel(s) }))}
+          />
+          <SelectFilter
+            param="pagamento"
+            label="Status financeiro"
+            options={PAYMENT_STATUSES.map((s) => ({ value: s, label: paymentLabel(s) }))}
+          />
+          <SelectFilter
+            param="forma"
+            label="Forma de pagamento"
+            options={methods.map((m) => ({ value: m.id, label: m.name }))}
+          />
+          <DateRangeFilter />
+          <ValueRangeFilter />
+          <ClearFilters params={["q", "status", "pagamento", "forma", "de", "ate", "min", "max", "cliente"]} />
+        </FilterBar>
 
         <DataTable<SaleListItem>
           rows={result.items}
@@ -151,7 +151,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               cell: (s) => (
                 <Link
                   href={`/vendas/${s.id}`}
-                  className="font-mono text-[13px] font-medium text-primary hover:underline"
+                  className="font-mono text-[13px] font-medium whitespace-nowrap text-primary hover:underline"
                 >
                   {formatOrderNumber(s.number)}
                 </Link>

@@ -19,7 +19,7 @@ export function StockMeter({
   const filled = current <= 0 ? 0 : Math.max(1, Math.round((current / capacity) * segments));
   const minIndex = minimum > 0 ? Math.min(segments - 1, Math.round((minimum / capacity) * segments)) : -1;
   const state = current <= 0 ? "out" : current <= minimum ? "low" : "ok";
-  const fill = state === "ok" ? "bg-ink" : state === "low" ? "bg-warning" : "bg-negative";
+  const fill = state === "ok" ? "bg-ink/80" : state === "low" ? "bg-warning" : "bg-negative";
 
   return (
     <div className={cn("relative", className)} role="img" aria-label={`${current} unidades; mínimo ${minimum}`}>

@@ -105,19 +105,17 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-card)] border border-line bg-line shadow-[var(--shadow-card)] md:grid-cols-4">
         <div className="bg-surface p-4 sm:p-5">
           <dt className="text-xs text-muted">Total da venda</dt>
-          <dd className="tabular mt-1 font-display text-xl font-semibold">{formatBRL(sale.total)}</dd>
+          <dd className="figure mt-1 font-display text-xl font-semibold">{formatBRL(sale.total)}</dd>
         </div>
         <div className="bg-surface p-4 sm:p-5">
           <dt className="text-xs text-muted">Recebido</dt>
-          <dd className="tabular mt-1 font-display text-xl font-semibold text-positive">
-            {formatBRL(sale.amountPaid)}
-          </dd>
+          <dd className="figure mt-1 font-display text-xl font-semibold text-positive">{formatBRL(sale.amountPaid)}</dd>
         </div>
         <div className="bg-surface p-4 sm:p-5">
           <dt className="text-xs text-muted">{cancelled ? "A devolver" : "Pendente"}</dt>
           <dd
             className={cn(
-              "tabular mt-1 font-display text-xl font-semibold",
+              "figure mt-1 font-display text-xl font-semibold",
               (cancelled ? sale.refundDue : sale.pending) > 0 ? "text-warning" : "text-ink",
             )}
           >
@@ -131,9 +129,13 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
         </div>
         <div className="bg-surface p-4 sm:p-5">
           <dt className="text-xs text-muted">Lucro bruto da venda</dt>
-          <dd className="tabular mt-1 font-display text-xl font-semibold">
+          <dd className="figure mt-1 font-display text-xl font-semibold">
             {sale.grossProfit === null ? (
-              <span className="text-base text-warning">custo não informado</span>
+              cancelled ? (
+                <span className="text-base text-muted">—</span>
+              ) : (
+                <span className="text-base text-warning">custo não informado</span>
+              )
             ) : (
               formatBRL(sale.grossProfit)
             )}
@@ -146,7 +148,7 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
         <div className="flex min-w-0 flex-col gap-5">
           <Card>
             <CardHeader title="Produtos" />
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-y border-line bg-surface-2/70 text-xs text-muted">

@@ -11,6 +11,9 @@ export function proxy(request: NextRequest) {
   if (isPublic) return NextResponse.next();
 
   if (!request.cookies.has(SESSION_COOKIE)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = pathname !== "/" ? `?next=${encodeURIComponent(pathname + search)}` : "";

@@ -217,7 +217,7 @@ function WithdrawalDialogBody({ onOpenChange }: WithdrawalDialogProps) {
               )}
             >
               <dt className="text-sm font-medium text-ink">Saldo restante</dt>
-              <dd className={cn("tabular font-display text-xl font-semibold", remaining < 0 && "text-negative")}>
+              <dd className={cn("figure font-display text-xl font-semibold", remaining < 0 && "text-negative")}>
                 {formatCents(remaining)}
               </dd>
             </div>

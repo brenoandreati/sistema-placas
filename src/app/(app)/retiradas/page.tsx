@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ClearFilters, DateRangeFilter, SelectFilter } from "@/components/ui/filters";
+import { ClearFilters, DateRangeFilter, FilterBar, SelectFilter } from "@/components/ui/filters";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/cn";
 import { addDaysToDate, formatDate, formatDateTime, isDateString, startOfLocalDay } from "@/lib/dates";
@@ -105,7 +105,7 @@ export default async function WithdrawalsPage({
         </div>
       )}
       <Card>
-        <div className="flex flex-wrap items-center gap-2 border-b border-line p-4">
+        <FilterBar params={["categoria", "status", "de", "ate"]}>
           <SelectFilter
             param="categoria"
             label="Todas as categorias"
@@ -121,7 +121,7 @@ export default async function WithdrawalsPage({
           />
           <DateRangeFilter />
           <ClearFilters params={["categoria", "status", "de", "ate"]} />
-        </div>
+        </FilterBar>
         <DataTable<WithdrawalView>
           rows={result.items}
           rowKey={(w) => w.id}

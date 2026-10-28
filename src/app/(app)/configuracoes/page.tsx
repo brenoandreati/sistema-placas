@@ -139,7 +139,7 @@ async function CategoriesTab() {
         description="Organizam despesas, retiradas e entradas. Categorias de sistema (recebimentos, estornos e compras de estoque) são fixas."
         action={<CategoryEditor />}
       />
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-y border-line bg-surface-2/70 text-xs text-muted">
             <tr>

@@ -631,7 +631,7 @@ function SaleDialogBody({ onOpenChange, presetCustomerId }: SaleDialogProps) {
               )}
               <div className="mt-1 flex items-baseline justify-between border-t border-white/15 pt-2">
                 <dt className="font-medium">Total da venda</dt>
-                <dd className="tabular font-display text-2xl font-semibold">{formatCents(total)}</dd>
+                <dd className="figure font-display text-2xl font-semibold">{formatCents(total)}</dd>
               </div>
               <div className="flex justify-between text-[13px]">
                 <dt className="text-white/70">Entra no caixa agora</dt>

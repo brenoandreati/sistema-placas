@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { cn } from "@/lib/cn";
@@ -124,7 +124,7 @@ export function DateRangeFilter({ fromParam = "de", toParam = "ate" }: { fromPar
         aria-label="Data inicial"
         value={searchParams.get(fromParam) ?? ""}
         onChange={(e) => setParams({ [fromParam]: e.target.value || null })}
-        className="w-auto"
+        className="w-auto min-w-0 max-md:flex-1"
       />
       <span className="text-xs text-muted">até</span>
       <Input
@@ -132,7 +132,7 @@ export function DateRangeFilter({ fromParam = "de", toParam = "ate" }: { fromPar
         aria-label="Data final"
         value={searchParams.get(toParam) ?? ""}
         onChange={(e) => setParams({ [toParam]: e.target.value || null })}
-        className="w-auto"
+        className="w-auto min-w-0 max-md:flex-1"
       />
     </div>
   );
@@ -150,5 +150,45 @@ export function ClearFilters({ params }: { params: string[] }) {
     >
       <X className="size-3.5" /> Limpar filtros
     </button>
+  );
+}
+
+/**
+ * Barra de filtros: busca sempre visível; demais filtros ficam recolhidos atrás de um botão
+ * em telas pequenas e em linha a partir do tablet.
+ */
+export function FilterBar({
+  search,
+  params,
+  children,
+  className,
+}: {
+  search?: React.ReactNode;
+  params: string[];
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const { searchParams } = useUrlParams();
+  const [open, setOpen] = useState(false);
+  const active = params.filter((p) => searchParams.get(p)).length;
+  return (
+    <div
+      className={cn("flex flex-col gap-2 border-b border-line p-4 lg:flex-row lg:flex-wrap lg:items-center", className)}
+    >
+      <div className="flex gap-2">
+        {search && <div className="min-w-0 flex-1">{search}</div>}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-medium text-ink-2 md:hidden"
+        >
+          <SlidersHorizontal className="size-4" /> Filtros{active > 0 ? ` (${active})` : ""}
+        </button>
+      </div>
+      <div className={cn("flex-wrap items-center gap-2 md:flex [&>*]:max-md:w-full", open ? "flex" : "hidden")}>
+        {children}
+      </div>
+    </div>
   );
 }

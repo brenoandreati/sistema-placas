@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ClearFilters, DateRangeFilter, SelectFilter } from "@/components/ui/filters";
+import { ClearFilters, DateRangeFilter, FilterBar, SelectFilter } from "@/components/ui/filters";
 import { LinkTabs } from "@/components/ui/link-tabs";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/cn";
@@ -224,7 +224,7 @@ async function MovementsTab({
   });
   return (
     <Card>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line p-4">
+      <FilterBar params={["produto", "tipo", "de", "ate"]}>
         <SelectFilter
           param="produto"
           label="Todos os produtos"
@@ -237,7 +237,7 @@ async function MovementsTab({
         />
         <DateRangeFilter />
         <ClearFilters params={["produto", "tipo", "de", "ate"]} />
-      </div>
+      </FilterBar>
       <DataTable<StockMovementView>
         rows={result.items}
         rowKey={(m) => m.id}
