@@ -15,6 +15,8 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Permissão necessária para ver o item (ver server/auth/permissions). */
+  permission?: string;
 }
 
 export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -30,15 +32,15 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Dinheiro",
     items: [
-      { href: "/financeiro", label: "Financeiro", icon: Wallet },
+      { href: "/financeiro", label: "Financeiro", icon: Wallet, permission: "finance.read" },
       { href: "/contas-a-receber", label: "Contas a receber", icon: CalendarClock },
-      { href: "/retiradas", label: "Retiradas", icon: ArrowUpRight },
+      { href: "/retiradas", label: "Retiradas", icon: ArrowUpRight, permission: "finance.read" },
     ],
   },
   {
     label: "Análise",
     items: [
-      { href: "/relatorios", label: "Relatórios", icon: ChartColumn },
+      { href: "/relatorios", label: "Relatórios", icon: ChartColumn, permission: "reports.read" },
       { href: "/configuracoes", label: "Configurações", icon: Settings },
     ],
   },

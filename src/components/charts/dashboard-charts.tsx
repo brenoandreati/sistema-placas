@@ -68,7 +68,7 @@ export function SalesChart({ points, granularity }: { points: SeriesPoint[]; gra
     >
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={points} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+          <ComposedChart data={points} margin={{ top: 12, right: 20, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="soldFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#2251d1" stopOpacity={0.12} />
@@ -98,7 +98,7 @@ export function SalesChart({ points, granularity }: { points: SeriesPoint[]; gra
             />
             <Area
               isAnimationActive={false}
-              type="monotone"
+              type="linear"
               dataKey="salesTotal"
               name="Vendido"
               stroke={C.sold}
@@ -109,7 +109,7 @@ export function SalesChart({ points, granularity }: { points: SeriesPoint[]; gra
             />
             <Line
               isAnimationActive={false}
-              type="monotone"
+              type="linear"
               dataKey="received"
               name="Recebido"
               stroke={C.in}
@@ -135,7 +135,7 @@ export function UnitsChart({ points }: { points: SeriesPoint[] }) {
     >
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={points} margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+          <BarChart data={points} margin={{ top: 12, right: 20, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke={C.grid} />
             <XAxis dataKey="label" {...axisProps} interval={xInterval(points.length)} minTickGap={16} />
             <YAxis {...axisProps} width={36} allowDecimals={false} tickFormatter={(v: number) => compactNumber(v)} />
@@ -185,7 +185,7 @@ export function CashFlowChart({ points }: { points: SeriesPoint[] }) {
     >
       <div className="h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} stackOffset="sign" margin={{ top: 12, right: 12, bottom: 0, left: 0 }}>
+          <BarChart data={data} stackOffset="sign" margin={{ top: 12, right: 20, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke={C.grid} />
             <XAxis dataKey="label" {...axisProps} interval={xInterval(points.length)} minTickGap={16} />
             <YAxis {...axisProps} width={48} tickFormatter={(v: number) => compactNumber(v)} />

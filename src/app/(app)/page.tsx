@@ -32,7 +32,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ periodo?: string; de?: string; ate?: string }>;
+  searchParams: Promise<{ periodo?: string; de?: string; ate?: string; acesso?: string }>;
 }) {
   await requirePageSession("dashboard.read");
   const settings = await getSettingsView();
@@ -118,6 +118,12 @@ export default async function DashboardPage({
         </div>
         <PeriodSelector preset={period.preset} from={period.from} to={period.to} />
       </div>
+
+      {sp.acesso === "negado" && (
+        <p role="alert" className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          Seu perfil não tem acesso à página solicitada. Peça a um administrador para ajustar suas permissões.
+        </p>
+      )}
 
       {/* Posição atual: não depende do período */}
       <section

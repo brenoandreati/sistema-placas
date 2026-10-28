@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/brand";
-import { useQuickActions } from "@/components/quick-actions";
+import { useQuickActions, type QuickAction } from "@/components/quick-actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -26,41 +26,59 @@ interface ShellProps {
   todayLabel: string;
   user: { name: string; email: string; role: string };
   setupPending: boolean;
+  /** Permissões do usuário atual (controla o que aparece no menu e nos atalhos). */
+  permissions: string[];
   children: React.ReactNode;
 }
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({
+  pathname,
+  permissions,
+  onNavigate,
+}: {
+  pathname: string;
+  permissions: string[];
+  onNavigate?: () => void;
+}) {
   return (
     <nav className="flex flex-col gap-5" aria-label="Seções">
-      {NAV_GROUPS.map((group, index) => (
-        <div key={index} className="flex flex-col gap-0.5">
-          {group.label && (
-            <p className="px-3 pb-1 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">{group.label}</p>
-          )}
-          {group.items.map((item) => {
-            const active = isActive(pathname, item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "group flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
-                  active
-                    ? "bg-primary-soft font-medium text-primary-ink"
-                    : "text-ink-2 hover:bg-ink/[0.04] hover:text-ink",
-                )}
-              >
-                <item.icon
-                  className={cn("size-[18px] shrink-0", active ? "text-primary" : "text-muted group-hover:text-ink-2")}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+      {NAV_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.permission || permissions.includes(item.permission)),
+      }))
+        .filter((group) => group.items.length > 0)
+        .map((group, index) => (
+          <div key={index} className="flex flex-col gap-0.5">
+            {group.label && (
+              <p className="px-3 pb-1 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">{group.label}</p>
+            )}
+            {group.items.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "group flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+                    active
+                      ? "bg-primary-soft font-medium text-primary-ink"
+                      : "text-ink-2 hover:bg-ink/[0.04] hover:text-ink",
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      "size-[18px] shrink-0",
+                      active ? "text-primary" : "text-muted group-hover:text-ink-2",
+                    )}
+                  />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
     </nav>
   );
 }
@@ -110,10 +128,40 @@ function UserMenu({ user, compact }: { user: ShellProps["user"]; compact?: boole
   );
 }
 
-export function AppShell({ displayName, businessName, todayLabel, user, setupPending, children }: ShellProps) {
+const LAUNCH_ITEMS = [
+  { type: "stock-entry", label: "Entrada de estoque", icon: PackagePlus, permission: "inventory.write" },
+  { type: "withdrawal", label: "Retirada de dinheiro", icon: ArrowUpRight, permission: "withdrawals.write" },
+  { type: "expense", label: "Despesa", icon: CircleMinus, permission: "finance.write" },
+  { type: "income", label: "Aporte ou outra entrada", icon: Plus, permission: "finance.write" },
+] as const;
+
+function LaunchItems({ permissions, onOpen }: { permissions: string[]; onOpen: (action: QuickAction) => void }) {
+  const items = LAUNCH_ITEMS.filter((item) => permissions.includes(item.permission));
+  if (items.length === 0) return <DropdownLabel>Nenhum lançamento disponível para o seu perfil</DropdownLabel>;
+  return (
+    <>
+      {items.map((item) => (
+        <DropdownItem key={item.type} onSelect={() => onOpen({ type: item.type })}>
+          <item.icon /> {item.label}
+        </DropdownItem>
+      ))}
+    </>
+  );
+}
+
+export function AppShell({
+  displayName,
+  businessName,
+  todayLabel,
+  user,
+  setupPending,
+  permissions,
+  children,
+}: ShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { open } = useQuickActions();
+  const canSell = permissions.includes("sales.write");
 
   // Atalho de teclado: "N" abre uma nova venda (fora de campos de texto).
   useEffect(() => {
@@ -122,14 +170,14 @@ export function AppShell({ displayName, businessName, todayLabel, user, setupPen
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable) return;
       if (document.querySelector("[role=dialog]")) return;
-      if (e.key === "n" || e.key === "N") {
+      if (canSell && (e.key === "n" || e.key === "N")) {
         e.preventDefault();
         open({ type: "sale" });
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, canSell]);
 
   return (
     <div className="min-h-dvh lg:pl-[248px]">
@@ -145,7 +193,7 @@ export function AppShell({ displayName, businessName, todayLabel, user, setupPen
           </span>
         </Link>
         <div className="flex-1 overflow-y-auto px-3 py-3">
-          <NavLinks pathname={pathname} />
+          <NavLinks pathname={pathname} permissions={permissions} />
         </div>
         <div className="border-t border-line p-2">
           <UserMenu user={user} />
@@ -177,23 +225,14 @@ export function AppShell({ displayName, businessName, todayLabel, user, setupPen
                 </Button>
               </DropdownTrigger>
               <DropdownContent className="w-60">
-                <DropdownItem onSelect={() => open({ type: "stock-entry" })}>
-                  <PackagePlus /> Entrada de estoque
-                </DropdownItem>
-                <DropdownItem onSelect={() => open({ type: "withdrawal" })}>
-                  <ArrowUpRight /> Retirada de dinheiro
-                </DropdownItem>
-                <DropdownItem onSelect={() => open({ type: "expense" })}>
-                  <CircleMinus /> Despesa
-                </DropdownItem>
-                <DropdownItem onSelect={() => open({ type: "income" })}>
-                  <Plus /> Aporte ou outra entrada
-                </DropdownItem>
+                <LaunchItems permissions={permissions} onOpen={open} />
               </DropdownContent>
             </Dropdown>
-            <Button onClick={() => open({ type: "sale" })} className="hidden sm:inline-flex" title="Atalho: N">
-              <Plus /> Nova venda
-            </Button>
+            {canSell && (
+              <Button onClick={() => open({ type: "sale" })} className="hidden sm:inline-flex" title="Atalho: N">
+                <Plus /> Nova venda
+              </Button>
+            )}
             <div className="lg:hidden">
               <UserMenu user={user} compact />
             </div>
@@ -228,27 +267,18 @@ export function AppShell({ displayName, businessName, todayLabel, user, setupPen
             </button>
           </DropdownTrigger>
           <DropdownContent side="top" className="w-60">
-            <DropdownItem onSelect={() => open({ type: "stock-entry" })}>
-              <PackagePlus /> Entrada de estoque
-            </DropdownItem>
-            <DropdownItem onSelect={() => open({ type: "withdrawal" })}>
-              <ArrowUpRight /> Retirada de dinheiro
-            </DropdownItem>
-            <DropdownItem onSelect={() => open({ type: "expense" })}>
-              <CircleMinus /> Despesa
-            </DropdownItem>
-            <DropdownItem onSelect={() => open({ type: "income" })}>
-              <Plus /> Aporte ou outra entrada
-            </DropdownItem>
+            <LaunchItems permissions={permissions} onOpen={open} />
           </DropdownContent>
         </Dropdown>
-        <button
-          type="button"
-          onClick={() => open({ type: "sale" })}
-          className="flex h-14 items-center gap-2 rounded-full bg-primary pr-6 pl-5 font-medium text-white shadow-[0_10px_30px_-6px_rgb(34_81_209/0.55)]"
-        >
-          <Plus className="size-5" /> Nova venda
-        </button>
+        {canSell && (
+          <button
+            type="button"
+            onClick={() => open({ type: "sale" })}
+            className="flex h-14 items-center gap-2 rounded-full bg-primary pr-6 pl-5 font-medium text-white shadow-[0_10px_30px_-6px_rgb(34_81_209/0.55)]"
+          >
+            <Plus className="size-5" /> Nova venda
+          </button>
+        )}
       </div>
 
       {/* Menu (celular/tablet) */}
@@ -259,7 +289,7 @@ export function AppShell({ displayName, businessName, todayLabel, user, setupPen
           description={todayLabel}
           className="sm:right-auto sm:left-0 sm:max-w-xs sm:border-r sm:border-l-0"
         >
-          <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+          <NavLinks pathname={pathname} permissions={permissions} onNavigate={() => setMenuOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>

@@ -1,0 +1,25 @@
+# PostgreSQL para desenvolvimento local.
+# Cria os bancos placas_dev (dados reais de desenvolvimento), placas_test (testes automatizados)
+# e placas_demo (dados de demonstração, isolados dos reais).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: placas
+      POSTGRES_PASSWORD: placas
+      POSTGRES_DB: placas_dev
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U placas -d placas_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
