@@ -95,6 +95,8 @@ model Settings {
   pageSize               Int       @default(20) @map("page_size")
   /// Quando verdadeiro, retiradas acima do saldo são aceitas mediante justificativa.
   allowNegativeBalance   Boolean   @default(false) @map("allow_negative_balance")
+  /// Endereço (domínio) gravado nos QR codes impressos: {qrBaseUrl}/q/{código}.
+  qrBaseUrl              String?   @map("qr_base_url")
   setupCompletedAt       DateTime? @map("setup_completed_at") @db.Timestamptz(3)
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -224,12 +226,55 @@ model Customer {
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  sales Sale[]
+  sales   Sale[]
+  qrCodes QrCode[]
 
   @@index([businessName])
   @@index([email])
   @@index([phone])
   @@map("customers")
+}
+
+// ───────────────────────────── QR codes dinâmicos ─────────────────────────────
+
+/// Lote de QR codes gerados de uma vez (unidade de impressão).
+model QrCodeBatch {
+  id          String   @id @default(uuid()) @db.Uuid
+  number      Int      @unique @default(autoincrement())
+  quantity    Int
+  notes       String?
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  codes QrCode[]
+
+  @@map("qr_code_batches")
+}
+
+/// QR code dinâmico: o código impresso na placa nunca muda; o link de destino é cadastrado e trocado no painel.
+model QrCode {
+  id             String      @id @default(uuid()) @db.Uuid
+  /// Código curto impresso no QR (endereço público /q/{code}).
+  code           String      @unique
+  batchId        String      @map("batch_id") @db.Uuid
+  batch          QrCodeBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  /// Ordem dentro do lote (ordem de impressão).
+  position       Int
+  /// Sem destino, o QR code ainda não foi ativado.
+  destinationUrl String?     @map("destination_url")
+  customerId     String?     @map("customer_id") @db.Uuid
+  customer       Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  label          String?
+  /// Quando o destino atual foi cadastrado.
+  linkedAt       DateTime?   @map("linked_at") @db.Timestamptz(3)
+  scanCount      Int         @default(0) @map("scan_count")
+  lastScannedAt  DateTime?   @map("last_scanned_at") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([batchId, position])
+  @@index([customerId])
+  @@map("qr_codes")
 }
 
 // ───────────────────────────── Vendas e pagamentos ─────────────────────────────

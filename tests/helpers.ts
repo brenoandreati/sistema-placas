@@ -12,6 +12,8 @@ export const TZ = "America/Sao_Paulo";
 
 const TABLES = [
   "audit_logs",
+  "qr_codes",
+  "qr_code_batches",
   "financial_transactions",
   "payments",
   "stock_movements",

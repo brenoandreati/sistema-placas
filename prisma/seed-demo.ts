@@ -40,6 +40,7 @@ async function main() {
   const { createCustomer } = await import("../src/server/services/customers");
   const { createSale, registerPayment, cancelSale } = await import("../src/server/services/sales");
   const { registerWithdrawal } = await import("../src/server/services/withdrawals");
+  const { createQrBatch, getQrCodesForPrint, updateQrCode } = await import("../src/server/services/qr-codes");
 
   try {
     if ((await prisma.sale.count()) > 0) {
@@ -276,6 +277,18 @@ async function main() {
         paymentMethodId: await method("Transferência bancária"),
         categoryId: await category(cat),
         description: desc,
+      });
+    }
+
+    // Um lote de QR codes: os primeiros já vinculados aos clientes, o restante livre para ativar.
+    await createQrBatch(actor, { quantity: 30, notes: "Adesivos para placas de acrílico" });
+    const qrCodes = await getQrCodesForPrint({ batchNumber: 1 });
+    for (const [i, customer] of customers.slice(0, 8).entries()) {
+      await updateQrCode(actor, {
+        code: qrCodes[i].code,
+        customerId: customer.id,
+        destinationUrl: customer.googleReviewUrl ?? `https://instagram.com/exemplo-demo-${i + 1}`,
+        label: i % 2 === 0 ? "Balcão" : undefined,
       });
     }
 

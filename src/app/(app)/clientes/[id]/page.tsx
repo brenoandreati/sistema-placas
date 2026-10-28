@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Mail, MessageCircle, Phone, Plus, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Mail, MessageCircle, Phone, Plus, QrCode, Star } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -22,6 +22,7 @@ import {
 import { requirePageSession } from "@/server/auth/guard";
 import { can } from "@/server/auth/permissions";
 import { getCustomerDetail } from "@/server/services/customers";
+import { listCustomerQrCodes } from "@/server/services/qr-codes";
 import { getSettingsView } from "@/server/services/settings";
 import { CustomerStatusButtons, EditCustomerButton } from "../customer-buttons";
 
@@ -48,7 +49,7 @@ export default async function CustomerDetailPage({
   if (!isUuid(id)) notFound();
   const settings = await getSettingsView();
   const tz = settings.timezone;
-  const detail = await getCustomerDetail(id);
+  const [detail, qrCodes] = await Promise.all([getCustomerDetail(id), listCustomerQrCodes(id)]);
   if (!detail) notFound();
   const { customer: c, summary } = detail;
   const tab = TABS.some((t) => t.key === aba) ? aba! : "visao";
@@ -224,6 +225,31 @@ export default async function CustomerDetailPage({
                 )}
               </CardBody>
             </Card>
+            {qrCodes.length > 0 && (
+              <Card>
+                <CardHeader title="QR codes" description="Placas com QR code vinculadas a este cliente." />
+                <ul className="divide-y divide-line border-t border-line">
+                  {qrCodes.map((q) => (
+                    <li key={q.id}>
+                      <Link
+                        href={`/qr-codes?q=${q.code}`}
+                        className="flex items-center gap-3 px-5 py-2.5 text-sm hover:bg-surface-2"
+                      >
+                        <QrCode className="size-4 shrink-0 text-muted" />
+                        <span className="min-w-0 flex-1">
+                          <span className="font-mono font-medium text-ink">{q.code}</span>
+                          {q.label && <span className="text-muted"> · {q.label}</span>}
+                          <span className="block truncate text-xs text-muted">{q.destinationUrl ?? "Sem link"}</span>
+                        </span>
+                        <span className="tabular shrink-0 text-xs text-muted">
+                          {formatInteger(q.scanCount)} leitura(s)
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
             <Card>
               <CardHeader title="Resumo comercial" />
               <CardBody>

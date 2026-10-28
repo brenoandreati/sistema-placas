@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // Verificação otimista: sem cookie de sessão, redireciona para o login.
 // A validação real da sessão acontece no servidor (layouts, server actions e route handlers).
 const SESSION_COOKIE = "placas_session";
-const PUBLIC_PATHS = ["/login", "/api/health"];
+// /q/{código} é o endereço impresso nos QR codes das placas: precisa abrir para qualquer pessoa.
+const PUBLIC_PATHS = ["/login", "/api/health", "/q"];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

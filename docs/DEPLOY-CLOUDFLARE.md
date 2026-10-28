@@ -36,7 +36,15 @@ npx wrangler secret put DATABASE_URL
 (cole a URL **com pooler** quando solicitado). O app fica em `https://sistema-placas.<seu-subdominio>.workers.dev`.
 Para usar um domínio próprio, adicione uma rota/custom domain ao Worker no painel do Cloudflare.
 
+**QR codes das placas.** O domínio gravado nos QR codes (QR codes → "Endereço dos QR codes") precisa apontar para este
+Worker. Prefira um domínio curto e definitivo (ex.: `suaplaca.com.br`): com o domínio no Cloudflare, abra o Worker →
+Settings → Domains & Routes → Add → Custom domain. Defina esse domínio **antes** de imprimir: é ele que fica na placa.
+
 Verifique: `https://…/api/health` deve responder `{"status":"ok"}`.
+
+**Limite de CPU** (veja Requisitos). Trabalho pesado de CPU fica no navegador — por exemplo, o desenho dos QR codes
+na folha de impressão e no download em SVG (no servidor, um lote de 60 custava 100–600 ms por página). Os logs
+(Workers → Observability) mostram `cpuTimeMs` por requisição.
 
 O `wrangler.jsonc` fixa a execução do Worker perto do banco (`"placement": { "mode": "targeted", "region":
 "aws:sa-east-1" }`). Se o banco estiver em outra região, ajuste esse valor: cada página faz várias consultas, e com o

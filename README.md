@@ -4,17 +4,18 @@ Sistema de gestão para o negócio de venda de placas NFC de avaliação do Goog
 pagamentos, contas a receber, livro-caixa, retiradas e relatórios — com dados reais em PostgreSQL, regras financeiras
 auditáveis e interface responsiva.
 
-| Área                 | O que faz                                                                                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**        | Saldo em caixa e placas disponíveis (posição atual); placas vendidas, valor bruto, recebido e lucro estimado por período; gráficos; alertas; atividades |
-| **Vendas**           | Cadastro rápido (cliente pode ser criado no próprio formulário), filtros, pagamentos parciais, estornos, cancelamento com devolução ao estoque          |
-| **Clientes**         | Busca, histórico de compras, financeiro, observações, dados do negócio, link de avaliações do Google, WhatsApp                                          |
-| **Estoque**          | Produtos, entradas (com custo médio ponderado), ajustes justificados, histórico de movimentações e de custos                                            |
-| **Financeiro**       | Posição atual × indicadores do período, livro-caixa com saldo acumulado, despesas, aportes, estornos compensatórios                                     |
-| **Contas a receber** | Vencidas, a vencer e sem vencimento; recebimento parcial ou total; link de cobrança pelo WhatsApp                                                       |
-| **Retiradas**        | Confirmação com saldo antes/depois, bloqueio de saldo negativo, categorias (pessoal × distribuição de lucros), estorno auditável                        |
-| **Relatórios**       | Vendas, estoque, clientes, financeiro e retiradas por período, com exportação CSV (padrão Excel pt-BR)                                                  |
-| **Configurações**    | Negócio, fuso, saldo inicial (com histórico), categorias, formas de pagamento, preferências, senha e log de auditoria                                   |
+| Área                 | O que faz                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**        | Saldo em caixa e placas disponíveis (posição atual); placas vendidas, valor bruto, recebido e lucro estimado por período; gráficos; alertas; atividades                               |
+| **Vendas**           | Cadastro rápido (cliente pode ser criado no próprio formulário), filtros, pagamentos parciais, estornos, cancelamento com devolução ao estoque                                        |
+| **Clientes**         | Busca, histórico de compras, financeiro, observações, dados do negócio, link de avaliações do Google, WhatsApp                                                                        |
+| **Estoque**          | Produtos, entradas (com custo médio ponderado), ajustes justificados, histórico de movimentações e de custos                                                                          |
+| **QR codes**         | QR codes dinâmicos em lote para imprimir nas placas; o link de cada um é cadastrado ou trocado depois (pelo painel ou escaneando a placa logado no celular), com contagem de leituras |
+| **Financeiro**       | Posição atual × indicadores do período, livro-caixa com saldo acumulado, despesas, aportes, estornos compensatórios                                                                   |
+| **Contas a receber** | Vencidas, a vencer e sem vencimento; recebimento parcial ou total; link de cobrança pelo WhatsApp                                                                                     |
+| **Retiradas**        | Confirmação com saldo antes/depois, bloqueio de saldo negativo, categorias (pessoal × distribuição de lucros), estorno auditável                                                      |
+| **Relatórios**       | Vendas, estoque, clientes, financeiro e retiradas por período, com exportação CSV (padrão Excel pt-BR)                                                                                |
+| **Configurações**    | Negócio, fuso, saldo inicial (com histórico), categorias, formas de pagamento, preferências, senha e log de auditoria                                                                 |
 
 ## Stack
 
@@ -100,10 +101,10 @@ Login da demonstração: `demo@placas.local` / `Demo@123456`. O script recusa ba
 npm test
 ```
 
-32 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
+43 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
 venda pendente, pagamento parcial, retirada, cancelamento, compra de estoque e consistência), além de concorrência
-(vendas e retiradas simultâneas), idempotência, estornos, imutabilidade no banco, duplicidade de clientes e cálculo de
-custo médio e lucro.
+(vendas e retiradas simultâneas), idempotência, estornos, imutabilidade no banco, duplicidade de clientes, cálculo de
+custo médio e lucro e QR codes dinâmicos (geração em lote, troca de link, leitura pública).
 
 ## Documentação
 

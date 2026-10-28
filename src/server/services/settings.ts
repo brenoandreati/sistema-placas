@@ -2,6 +2,7 @@ import "server-only";
 import type { Settings } from "@/generated/prisma/client";
 import { DEFAULT_TIMEZONE, isPeriodPreset, type PeriodPreset } from "@/lib/dates";
 import { settingsSchema, type SettingsInput } from "@/lib/validation/finance";
+import { qrBaseUrlSchema, type QrBaseUrlInput } from "@/lib/validation/qr-codes";
 import type { Actor } from "@/server/context";
 import { prisma, type Tx } from "@/server/db";
 import { fromCents, numOrNull } from "@/server/money";
@@ -25,6 +26,7 @@ export interface SettingsView {
   dashboardDefaultPeriod: PeriodPreset;
   pageSize: number;
   allowNegativeBalance: boolean;
+  qrBaseUrl: string | null;
   setupCompleted: boolean;
 }
 
@@ -41,6 +43,7 @@ export function toSettingsView(s: Settings): SettingsView {
     dashboardDefaultPeriod: isPeriodPreset(s.dashboardDefaultPeriod) ? s.dashboardDefaultPeriod : "30d",
     pageSize: s.pageSize,
     allowNegativeBalance: s.allowNegativeBalance,
+    qrBaseUrl: s.qrBaseUrl,
     setupCompleted: s.setupCompletedAt !== null,
   };
 }
@@ -92,5 +95,27 @@ export async function updateSettings(actor: Actor, input: SettingsInput): Promis
       });
     }
     return afterView;
+  });
+}
+
+/** Domínio gravado nos QR codes. Trocar depois de imprimir faz as placas antigas pararem de funcionar. */
+export async function updateQrBaseUrl(actor: Actor, input: QrBaseUrlInput): Promise<SettingsView> {
+  const { qrBaseUrl } = qrBaseUrlSchema.parse(input);
+  return prisma.$transaction(async (tx) => {
+    const before = await getSettings(tx);
+    const updated = await tx.settings.update({ where: { id: 1 }, data: { qrBaseUrl: qrBaseUrl ?? null } });
+    if (before.qrBaseUrl !== updated.qrBaseUrl) {
+      await audit(tx, actor, {
+        action: "settings.update",
+        entityType: "settings",
+        entityId: "1",
+        summary: updated.qrBaseUrl
+          ? `Endereço dos QR codes definido como ${updated.qrBaseUrl}`
+          : "Endereço dos QR codes removido",
+        before: { qrBaseUrl: before.qrBaseUrl },
+        after: { qrBaseUrl: updated.qrBaseUrl },
+      });
+    }
+    return toSettingsView(updated);
   });
 }
