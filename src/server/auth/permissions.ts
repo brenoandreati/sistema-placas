@@ -9,6 +9,7 @@ export const PERMISSIONS = {
   "sales.cancel": ["ADMIN", "MANAGER"],
   "customers.write": ["ADMIN", "MANAGER", "OPERATOR"],
   "customers.delete": ["ADMIN"],
+  "qrcodes.write": ["ADMIN", "MANAGER", "OPERATOR"],
   "inventory.write": ["ADMIN", "MANAGER", "OPERATOR"],
   "inventory.cost": ["ADMIN", "MANAGER"],
   "finance.read": ["ADMIN", "MANAGER", "VIEWER"],

@@ -117,3 +117,24 @@ total da venda     = total dos produtos − desconto + frete
 - Duplicidades evidentes são bloqueadas: mesmo CNPJ, e-mail ou telefone de outro cliente.
 - Cliente com vendas não pode ser excluído, apenas desativado (o histórico é preservado). Desativados não aparecem no
   formulário de venda.
+
+## QR codes dinâmicos
+
+O QR impresso na placa guarda só um endereço fixo, `{domínio}/q/{código}`. O destino fica no banco e pode ser
+cadastrado ou trocado a qualquer momento, sem reimprimir (serviço em `src/server/services/qr-codes.ts`, testes em
+`tests/qr-codes.test.ts`).
+
+- **Lotes.** QR codes são gerados em lotes de até 500, já sem link. Cada código tem 6 caracteres aleatórios de um
+  alfabeto sem ambiguidades (sem 0/O e 1/I/L), é único no sistema e tem uma posição no lote (ordem de impressão).
+- **Endereço impresso.** Configurado em QR codes → "Endereço dos QR codes" (só o domínio, ex.:
+  `https://suaplaca.com.br`). Sem configuração, vale o endereço atual do painel. Trocar o domínio depois de imprimir
+  faz as placas antigas pararem de funcionar, a menos que o domínio antigo continue apontando para o sistema.
+- **Link.** Só endereços `http(s)` (validado no servidor e por CHECK no banco). Link em branco desativa o QR code.
+  Cliente e identificação ("Balcão", "Mesa 3") são opcionais; ao escolher um cliente com link de avaliações, ele é
+  sugerido como destino. Excluir o cliente mantém o link e só desfaz o vínculo.
+- **Leitura.** `/q/{código}` é público. Com link, responde `302` (sem cache, para que a troca valha na próxima leitura) e
+  soma uma leitura. Sem link, abre a página de ativação: o público vê "ainda não foi ativado"; quem está logado com
+  permissão cadastra o link ali mesmo (útil para ativar escaneando a placa com o celular).
+- **Impressão.** Folha A4 por lote ou por código avulso, em tamanho real (2 a 6 cm), com guias de corte e o código
+  escrito embaixo. Também é possível baixar cada QR code em SVG para usar na arte da placa.
+- Geração de lote, cadastro, troca e remoção de link e mudança do domínio são auditados.

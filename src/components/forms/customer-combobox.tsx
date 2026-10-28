@@ -19,7 +19,7 @@ function normalize(s: string) {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-/** Seletor de cliente com busca e opção de cadastrar um novo sem sair do formulário. */
+/** Seletor de cliente com busca e (se `onCreateNew` for informado) opção de cadastrar um novo sem sair do formulário. */
 export function CustomerCombobox({
   customers,
   value,
@@ -31,7 +31,7 @@ export function CustomerCombobox({
   customers: CustomerOption[];
   value: string | null;
   onChange: (customer: CustomerOption) => void;
-  onCreateNew: (initialName: string) => void;
+  onCreateNew?: (initialName: string) => void;
   invalid?: boolean;
   id?: string;
 }) {
@@ -75,14 +75,14 @@ export function CustomerCombobox({
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setOpen(true);
-      setHighlight((h) => Math.min(h + 1, results.length));
+      setHighlight((h) => Math.min(h + 1, onCreateNew ? results.length : Math.max(0, results.length - 1)));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
     } else if (e.key === "Enter" && open) {
       e.preventDefault();
       if (highlight < results.length) choose(results[highlight]);
-      else onCreateNew(query);
+      else onCreateNew?.(query);
     } else if (e.key === "Escape" && open) {
       e.stopPropagation();
       setOpen(false);
@@ -175,22 +175,24 @@ export function CustomerCombobox({
               {c.id === value && <Check className="size-4 text-primary" />}
             </li>
           ))}
-          <li
-            role="option"
-            aria-selected={false}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              setOpen(false);
-              onCreateNew(query);
-            }}
-            onMouseEnter={() => setHighlight(results.length)}
-            className={cn(
-              "mt-1 flex cursor-pointer items-center gap-2 rounded-lg border-t border-line px-3 py-2.5 text-sm font-medium text-primary",
-              highlight === results.length && "bg-primary-soft",
-            )}
-          >
-            <Plus className="size-4" /> Cadastrar novo cliente{query.trim() ? `: “${query.trim()}”` : ""}
-          </li>
+          {onCreateNew && (
+            <li
+              role="option"
+              aria-selected={false}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setOpen(false);
+                onCreateNew(query);
+              }}
+              onMouseEnter={() => setHighlight(results.length)}
+              className={cn(
+                "mt-1 flex cursor-pointer items-center gap-2 rounded-lg border-t border-line px-3 py-2.5 text-sm font-medium text-primary",
+                highlight === results.length && "bg-primary-soft",
+              )}
+            >
+              <Plus className="size-4" /> Cadastrar novo cliente{query.trim() ? `: “${query.trim()}”` : ""}
+            </li>
+          )}
         </ul>
       )}
     </div>

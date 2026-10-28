@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChartColumn,
   LayoutDashboard,
+  QrCode,
   ReceiptText,
   Settings,
   Store,
@@ -27,6 +28,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/vendas", label: "Vendas", icon: ReceiptText },
       { href: "/clientes", label: "Clientes", icon: Store },
       { href: "/estoque", label: "Estoque de placas", icon: Boxes },
+      { href: "/qr-codes", label: "QR codes", icon: QrCode },
     ],
   },
   {

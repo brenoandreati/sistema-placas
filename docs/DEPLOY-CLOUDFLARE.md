@@ -34,6 +34,10 @@ npx wrangler secret put DATABASE_URL
 (cole a URL **com pooler** quando solicitado). O app fica em `https://sistema-placas.<seu-subdominio>.workers.dev`.
 Para usar um domínio próprio, adicione uma rota/custom domain ao Worker no painel do Cloudflare.
 
+**QR codes das placas.** O domínio gravado nos QR codes (QR codes → "Endereço dos QR codes") precisa apontar para este
+Worker. Prefira um domínio curto e definitivo (ex.: `suaplaca.com.br`): com o domínio no Cloudflare, abra o Worker →
+Settings → Domains & Routes → Add → Custom domain. Defina esse domínio **antes** de imprimir: é ele que fica na placa.
+
 Verifique: `https://…/api/health` deve responder `{"status":"ok"}`.
 
 O `wrangler.jsonc` fixa a execução do Worker perto do banco (`"placement": { "mode": "targeted", "region":

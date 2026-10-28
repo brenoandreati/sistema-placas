@@ -25,6 +25,16 @@ export async function clientIp(): Promise<string | null> {
   return h.get("cf-connecting-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
 }
 
+/** Protocolo + domínio pelo qual o painel está sendo acessado (ex.: https://sistema-placas.exemplo.workers.dev). */
+export async function requestOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000";
+  const proto =
+    h.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
+    (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 /** Para server actions e route handlers: valida a sessão no servidor a cada chamada. */
 export async function requireActor(permission?: Permission): Promise<{ actor: Actor; session: CurrentSession }> {
   const session = await getCurrentSession();

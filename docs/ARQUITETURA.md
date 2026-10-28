@@ -18,7 +18,7 @@ navegador ──► proxy.ts (cookie presente?) ──► páginas (Server Compo
 | `src/lib/validation/`           | Schemas Zod compartilhados entre formulários e servidor                                        |
 | `src/lib/dates.ts`, `format.ts` | Períodos no fuso do negócio, formatação pt-BR                                                  |
 | `src/components/`               | UI: primitivas (`ui/`), formulários (`forms/`), gráficos, shell, dashboard                     |
-| `src/app/(app)/`                | Páginas autenticadas; `src/app/(auth)/login` é a única pública                                 |
+| `src/app/(app)/`                | Páginas autenticadas; públicas: `src/app/(auth)/login` e `src/app/q/` (endereço dos QR codes)  |
 | `tests/`                        | Testes de integração dos serviços contra PostgreSQL real                                       |
 
 Os serviços não dependem do Next.js (recebem um `Actor` com o usuário), por isso são testados diretamente e podem ser

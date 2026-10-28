@@ -17,21 +17,25 @@
 - Server actions validam todos os dados com Zod no servidor; o navegador nunca envia totais calculados que sejam aceitos
   sem recálculo (o servidor recalcula subtotal, total e status).
 - Matriz de permissões em `src/server/auth/permissions.ts`. Papéis: `ADMIN` (tudo), `MANAGER` (operação e financeiro,
-  sem configurações), `OPERATOR` (vendas, clientes e estoque), `VIEWER` (consulta).
+  sem configurações), `OPERATOR` (vendas, clientes, estoque e QR codes), `VIEWER` (consulta).
 
 ## Proteções adicionais
 
 - Cabeçalhos: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`,
   `Cross-Origin-Opener-Policy`.
 - Redirecionamento pós-login só para caminhos internos (sem open redirect).
+- `/q/{código}` (endereço dos QR codes) é a única rota pública além do login e do health check. Ela só redireciona
+  para destinos `http(s)` cadastrados por usuários com a permissão `qrcodes.write` (CHECK no banco impede
+  `javascript:` e similares) e não expõe dados do sistema; a página de ativação só mostra o formulário a quem está
+  logado com essa permissão.
 - CSV protegido contra injeção de fórmulas.
 - Nenhum segredo no frontend; variáveis sensíveis apenas no servidor (`.env` ou segredos do provedor).
 
 ## Auditoria
 
 `audit_logs` registra criação e cancelamento de vendas, pagamentos e estornos, movimentações de estoque, retiradas,
-despesas, aportes, alterações de saldo inicial, preços, custos, clientes e configurações — com usuário, data/hora, IP,
-valores anteriores/novos e justificativa. A tabela é imutável (trigger) e pode ser consultada em
+despesas, aportes, alterações de saldo inicial, preços, custos, clientes, QR codes e configurações — com usuário,
+data/hora, IP, valores anteriores/novos e justificativa. A tabela é imutável (trigger) e pode ser consultada em
 Configurações → Auditoria.
 
 ## Políticas de acesso ao banco
