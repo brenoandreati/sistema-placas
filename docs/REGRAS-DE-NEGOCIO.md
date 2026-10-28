@@ -136,5 +136,6 @@ cadastrado ou trocado a qualquer momento, sem reimprimir (serviço em `src/serve
   soma uma leitura. Sem link, abre a página de ativação: o público vê "ainda não foi ativado"; quem está logado com
   permissão cadastra o link ali mesmo (útil para ativar escaneando a placa com o celular).
 - **Impressão.** Folha A4 por lote ou por código avulso, em tamanho real (2 a 6 cm), com guias de corte e o código
-  escrito embaixo. Também é possível baixar cada QR code em SVG para usar na arte da placa.
+  escrito embaixo. Também é possível baixar cada QR code em SVG para usar na arte da placa. Os QR codes são desenhados
+  no navegador, nunca no servidor (veja o limite de CPU em [DEPLOY-CLOUDFLARE.md](DEPLOY-CLOUDFLARE.md)).
 - Geração de lote, cadastro, troca e remoção de link e mudança do domínio são auditados.

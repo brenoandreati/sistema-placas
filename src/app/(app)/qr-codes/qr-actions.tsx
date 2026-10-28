@@ -203,6 +203,21 @@ export function QrRowActions({
     }
   }
 
+  // Gerado no navegador (o desenho do QR pesa no limite de CPU do Worker); a biblioteca só carrega no clique.
+  async function download() {
+    try {
+      const { qrSvgFile } = await import("@/lib/qr-svg");
+      const url = URL.createObjectURL(new Blob([qrSvgFile(publicUrl)], { type: "image/svg+xml" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `qr-${qr.code}.svg`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      toast.error("Não foi possível gerar a imagem. Tente novamente.");
+    }
+  }
+
   return (
     <div className="flex items-center justify-end gap-1">
       {canWrite && (
@@ -237,10 +252,8 @@ export function QrRowActions({
               <Printer /> Imprimir este QR code
             </Link>
           </DropdownItem>
-          <DropdownItem asChild>
-            <a href={`/api/qr-codes/${qr.code}`} download={`qr-${qr.code}.svg`}>
-              <Download /> Baixar imagem (SVG)
-            </a>
+          <DropdownItem onSelect={download}>
+            <Download /> Baixar imagem (SVG)
           </DropdownItem>
         </DropdownContent>
       </Dropdown>
