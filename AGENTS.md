@@ -18,4 +18,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Registros financeiros, pagamentos, movimentações de estoque e auditoria são imutáveis (triggers). Correções = lançamento
   compensatório. Toda operação crítica chama `audit()` na mesma transação.
 - Antes de concluir: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+- **Várias sessões trabalham neste repositório.** O ramo padrão do GitHub (hoje `claude/practical-tesla-odjvjv`) é a
+  versão oficial: tem tudo o que está no ar. Antes de começar qualquer alteração, e de novo antes de cada deploy, rode
+  `git fetch origin` e junte o ramo padrão no seu (`git merge origin/<ramo padrão>`). Nunca rode `npm run cf:deploy`
+  a partir de um ramo que não contenha o ramo padrão: o deploy substitui o site inteiro e apaga o que outras sessões
+  publicaram (aconteceu em 28/10/2026 com os QR codes). Ao terminar, junte o seu trabalho de volta no ramo padrão por
+  pull request. Migrations novas são aplicadas no banco de produção (Neon) antes do deploy.
 - Documentação: `docs/REGRAS-DE-NEGOCIO.md`, `docs/ARQUITETURA.md`, `docs/SEGURANCA-E-BACKUP.md`, `docs/DEPLOY-CLOUDFLARE.md`.
