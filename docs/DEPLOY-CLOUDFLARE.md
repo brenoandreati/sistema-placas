@@ -7,7 +7,9 @@ PostgreSQL gerenciado, então o banco fica em um provedor PostgreSQL (recomendad
 ## Requisitos
 
 - **Plano Workers Paid** (US$ 5/mês): o bundle comprimido tem ~3,4 MiB, acima do limite de 3 MiB do plano gratuito, e
-  as páginas precisam de mais CPU que os 10 ms do plano gratuito (o login, com bcrypt, usa ~600 ms).
+  as páginas precisam de mais CPU que os 10 ms do plano gratuito (páginas usam 30–300 ms; o login, com bcrypt,
+  ~600 ms). No plano gratuito o Cloudflare tolera o excesso por um tempo e depois passa a encerrar requisições com
+  `exceededCpu` (erro 503 aleatório, inclusive no login).
 - Um PostgreSQL 14+ acessível pela internet, com duas URLs:
   - `DATABASE_URL`: conexão **com pooler** (no Neon, o host com `-pooler`), usada pelo app;
   - `MIGRATION_DATABASE_URL`: conexão **direta**, usada só pelas migrations.
@@ -39,6 +41,23 @@ Verifique: `https://…/api/health` deve responder `{"status":"ok"}`.
 O `wrangler.jsonc` fixa a execução do Worker perto do banco (`"placement": { "mode": "targeted", "region":
 "aws:sa-east-1" }`). Se o banco estiver em outra região, ajuste esse valor: cada página faz várias consultas, e com o
 Worker longe do banco cada uma paga a distância (medido: `/api/health` caiu de ~1 s para ~70 ms).
+
+## Endereço público (brplacasnfc.pages.dev)
+
+O endereço `*.workers.dev` leva o subdomínio da conta, que é compartilhado por todos os Workers dela. Para ter um
+link próprio sem mexer nos outros projetos, `deploy/pages/` é um projeto do Cloudflare Pages (`brplacasnfc`) cujo
+`_worker.js` repassa cada requisição, sem alterações, ao Worker `sistema-placas` por um _service binding_. Não há
+cópia do app nem dos segredos: banco, sessões e regras continuam só no Worker.
+
+```bash
+npm run cf:link:deploy
+```
+
+Só é preciso refazer esse deploy se `deploy/pages/` mudar; deploys do app (`npm run cf:deploy`) valem para os dois
+endereços. O projeto foi criado como Pages clássico (`wrangler pages project create brplacasnfc --production-branch
+main --force`): sem o `--force`, o wrangler converte projetos novos em Workers, que voltariam a usar o subdomínio da
+conta. Com um domínio próprio, o melhor é ligá-lo direto ao Worker (Workers → sistema-placas → Domínios) e
+dispensar o projeto Pages.
 
 ## Deploys seguintes
 

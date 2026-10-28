@@ -78,6 +78,7 @@ Atalho: a tecla **N** abre uma nova venda em qualquer tela.
 | `npm run user:create -- --email … --name …`     | Cria usuário (`--role`, `--reset` para redefinir senha)           |
 | `npm run backup`                                | Backup com `pg_dump` (+ checksum e retenção)                      |
 | `npm run cf:build` / `cf:preview` / `cf:deploy` | Build, teste local e deploy no Cloudflare Workers                 |
+| `npm run cf:link:deploy`                        | Publica o endereço `brplacasnfc.pages.dev` (repasse ao Worker)    |
 
 ## Dados de demonstração
 
