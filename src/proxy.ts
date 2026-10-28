@@ -23,5 +23,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|robots.txt).*)"],
+  // Ícones e manifesto ficam públicos: o iPhone e o Chrome os buscam sem o cookie de sessão.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|icons/|robots.txt).*)",
+  ],
 };
