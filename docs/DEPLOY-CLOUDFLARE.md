@@ -42,10 +42,9 @@ Settings → Domains & Routes → Add → Custom domain. Defina esse domínio **
 
 Verifique: `https://…/api/health` deve responder `{"status":"ok"}`.
 
-**Limite de CPU.** No plano gratuito do Workers cada requisição tem pouquíssimo tempo de CPU; picos são tolerados, mas
-o excesso repetido derruba até as páginas leves (`Worker exceeded CPU time limit`, erro 503). Trabalho pesado de CPU
-fica no navegador — por exemplo, o desenho dos QR codes na folha de impressão e no download em SVG. Os logs (Workers →
-Observability) mostram `cpuTimeMs` por requisição. O plano pago (Workers Paid) eleva o limite.
+**Limite de CPU** (veja Requisitos). Trabalho pesado de CPU fica no navegador — por exemplo, o desenho dos QR codes
+na folha de impressão e no download em SVG (no servidor, um lote de 60 custava 100–600 ms por página). Os logs
+(Workers → Observability) mostram `cpuTimeMs` por requisição.
 
 O `wrangler.jsonc` fixa a execução do Worker perto do banco (`"placement": { "mode": "targeted", "region":
 "aws:sa-east-1" }`). Se o banco estiver em outra região, ajuste esse valor: cada página faz várias consultas, e com o
