@@ -139,3 +139,20 @@ cadastrado ou trocado a qualquer momento, sem reimprimir (serviço em `src/serve
   escrito embaixo. Também é possível baixar cada QR code em SVG para usar na arte da placa. Os QR codes são desenhados
   no navegador, nunca no servidor (veja o limite de CPU em [DEPLOY-CLOUDFLARE.md](DEPLOY-CLOUDFLARE.md)).
 - Geração de lote, cadastro, troca e remoção de link e mudança do domínio são auditados.
+
+## Link de avaliação do Google
+
+Menu "Gerar link": a partir do nome do negócio e do link dele no Google Maps, gera o link que abre direto a tela de
+avaliar, `https://search.google.com/local/writereview?placeid={Place ID}` (serviço em
+`src/server/services/review-links.ts`, conversão em `src/lib/google-review.ts`, testes em `tests/review-links.test.ts`).
+
+- **Sem API paga.** O endereço de um lugar no Google Maps traz o _feature id_ do negócio (`!1s0x…:0x…` ou
+  `ftid=0x…:0x…`); o Place ID "ChIJ…" é esse mesmo par em protobuf/base64url. Também são aceitos endereços com
+  `placeid`, `place_id` ou `query_place_id`, links de avaliação prontos e o link `g.page/r/…/review` do Perfil da
+  Empresa. O formato não é documentado pelo Google: se mudar, o gerador avisa que não encontrou o negócio.
+- **Links curtos** (`maps.app.goo.gl`, `goo.gl`, `g.co`, `g.page`, `share.google`): o servidor segue os
+  redirecionamentos (até 6, com tempo limite) e só abre endereços desses domínios do Google. Links de busca ou de área
+  do mapa, sem um negócio selecionado, são recusados com instruções.
+- **Histórico.** Cada link gerado fica guardado com o nome do negócio; gerar de novo o mesmo lugar atualiza o registro
+  em vez de duplicar. Excluir do histórico não afeta placas e QR codes que já usam o link. Geração, atualização e
+  exclusão são auditadas.

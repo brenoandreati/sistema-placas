@@ -11,6 +11,7 @@ auditáveis e interface responsiva.
 | **Clientes**         | Busca, histórico de compras, financeiro, observações, dados do negócio, link de avaliações do Google, WhatsApp                                                                        |
 | **Estoque**          | Produtos, entradas (com custo médio ponderado), ajustes justificados, histórico de movimentações e de custos                                                                          |
 | **QR codes**         | QR codes dinâmicos em lote para imprimir nas placas; o link de cada um é cadastrado ou trocado depois (pelo painel ou escaneando a placa logado no celular), com contagem de leituras |
+| **Gerar link**       | Link direto de avaliação do Google a partir do link do negócio no Google Maps (inclusive os links curtos de compartilhamento), com histórico                                          |
 | **Financeiro**       | Posição atual × indicadores do período, livro-caixa com saldo acumulado, despesas, aportes, estornos compensatórios                                                                   |
 | **Contas a receber** | Vencidas, a vencer e sem vencimento; recebimento parcial ou total; link de cobrança pelo WhatsApp                                                                                     |
 | **Retiradas**        | Confirmação com saldo antes/depois, bloqueio de saldo negativo, categorias (pessoal × distribuição de lucros), estorno auditável                                                      |
@@ -101,10 +102,10 @@ Login da demonstração: `demo@placas.local` / `Demo@123456`. O script recusa ba
 npm test
 ```
 
-43 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
+53 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
 venda pendente, pagamento parcial, retirada, cancelamento, compra de estoque e consistência), além de concorrência
 (vendas e retiradas simultâneas), idempotência, estornos, imutabilidade no banco, duplicidade de clientes, cálculo de
-custo médio e lucro e QR codes dinâmicos (geração em lote, troca de link, leitura pública).
+custo médio e lucro e QR codes dinâmicos (geração em lote, troca de link, leitura pública) e geração do link de avaliação do Google.
 
 ## Documentação
 

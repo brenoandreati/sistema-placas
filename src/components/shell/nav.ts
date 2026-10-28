@@ -7,6 +7,7 @@ import {
   QrCode,
   ReceiptText,
   Settings,
+  Star,
   Store,
   Wallet,
   type LucideIcon,
@@ -29,6 +30,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/clientes", label: "Clientes", icon: Store },
       { href: "/estoque", label: "Estoque de placas", icon: Boxes },
       { href: "/qr-codes", label: "QR codes", icon: QrCode },
+      { href: "/gerar-link", label: "Gerar link", icon: Star },
     ],
   },
   {
