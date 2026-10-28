@@ -31,7 +31,11 @@ export async function runAction<T>(
   }
 }
 
-export function toActionError(error: unknown): { ok: false; error: string; fieldErrors?: Record<string, string[] | undefined> } {
+export function toActionError(error: unknown): {
+  ok: false;
+  error: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+} {
   if (error instanceof z.ZodError) {
     const flattened = z.flattenError(error);
     const first = error.issues[0]?.message;
@@ -42,7 +46,11 @@ export function toActionError(error: unknown): { ok: false; error: string; field
     };
   }
   if (error instanceof DomainError) {
-    return { ok: false, error: error.message, fieldErrors: error.field ? { [error.field]: [error.message] } : undefined };
+    return {
+      ok: false,
+      error: error.message,
+      fieldErrors: error.field ? { [error.field]: [error.message] } : undefined,
+    };
   }
   console.error("[action] erro inesperado", error);
   return { ok: false, error: "Não foi possível concluir a operação. Tente novamente em instantes." };

@@ -6,12 +6,14 @@ const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILURES_PER_EMAIL = 5;
 const MAX_FAILURES_PER_IP = 20;
 
-export type LoginResult =
-  | { ok: true; userId: string }
-  | { ok: false; reason: "invalid" | "rate_limited" };
+export type LoginResult = { ok: true; userId: string } | { ok: false; reason: "invalid" | "rate_limited" };
 
 /** Verifica credenciais com limite de tentativas por e-mail e por IP. */
-export async function verifyCredentials(email: string, password: string, ipAddress: string | null): Promise<LoginResult> {
+export async function verifyCredentials(
+  email: string,
+  password: string,
+  ipAddress: string | null,
+): Promise<LoginResult> {
   const since = new Date(Date.now() - WINDOW_MS);
   const [emailFailures, ipFailures] = await Promise.all([
     prisma.loginAttempt.count({ where: { email, success: false, createdAt: { gte: since } } }),

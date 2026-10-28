@@ -249,7 +249,10 @@ export interface SeriesPoint {
   expenses: number;
 }
 
-export async function getTimeSeries(period: Period, tz: string): Promise<{ granularity: "day" | "month"; points: SeriesPoint[] }> {
+export async function getTimeSeries(
+  period: Period,
+  tz: string,
+): Promise<{ granularity: "day" | "month"; points: SeriesPoint[] }> {
   const granularity = bucketGranularity(period);
   const fmt = granularity === "day" ? "YYYY-MM-DD" : "YYYY-MM";
   const [sales, units, flows] = await Promise.all([
@@ -263,7 +266,9 @@ export async function getTimeSeries(period: Period, tz: string): Promise<{ granu
         FROM sales s JOIN sale_items i ON i.sale_id = s.id
        WHERE s.status <> 'CANCELLED' AND s.sale_date >= ${period.start} AND s.sale_date < ${period.end}
        GROUP BY bucket`,
-    prisma.$queryRaw<{ bucket: string; grp: FinancialCategoryGroup; direction: "IN" | "OUT"; amount: Prisma.Decimal | string }[]>`
+    prisma.$queryRaw<
+      { bucket: string; grp: FinancialCategoryGroup; direction: "IN" | "OUT"; amount: Prisma.Decimal | string }[]
+    >`
       SELECT to_char(ft.occurred_at AT TIME ZONE ${tz}, ${fmt}) AS bucket, c."group"::text AS grp, ft.direction::text AS direction,
              SUM(ft.amount) AS amount
         FROM financial_transactions ft JOIN financial_categories c ON c.id = ft.category_id
@@ -274,7 +279,16 @@ export async function getTimeSeries(period: Period, tz: string): Promise<{ granu
   const points = new Map<string, SeriesPoint>(
     periodBuckets(period, granularity).map((key) => [
       key,
-      { key, label: formatBucketLabel(key, granularity), salesTotal: 0, units: 0, received: 0, inflows: 0, withdrawals: 0, expenses: 0 },
+      {
+        key,
+        label: formatBucketLabel(key, granularity),
+        salesTotal: 0,
+        units: 0,
+        received: 0,
+        inflows: 0,
+        withdrawals: 0,
+        expenses: 0,
+      },
     ]),
   );
   for (const row of sales) {
@@ -338,7 +352,12 @@ export interface ActivityItem {
 }
 
 const NEGATIVE_ACTIONS = new Set(["sale.cancel", "payment.refund", "withdrawal.create", "expense.create"]);
-const POSITIVE_ACTIONS = new Set(["payment.receive", "finance.capital_contribution", "finance.other_income", "withdrawal.reverse"]);
+const POSITIVE_ACTIONS = new Set([
+  "payment.receive",
+  "finance.capital_contribution",
+  "finance.other_income",
+  "withdrawal.reverse",
+]);
 
 export async function getRecentActivity(limit = 10): Promise<ActivityItem[]> {
   const logs = await prisma.auditLog.findMany({

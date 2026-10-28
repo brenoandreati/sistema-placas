@@ -62,7 +62,10 @@ interface StockMoveArgs {
 export async function addStockTx(
   tx: Tx,
   actor: Actor,
-  args: StockMoveArgs & { type: Extract<StockMovementType, "ENTRY" | "SALE_RETURN" | "ADJUSTMENT_IN">; unitCost: Dec | null },
+  args: StockMoveArgs & {
+    type: Extract<StockMovementType, "ENTRY" | "SALE_RETURN" | "ADJUSTMENT_IN">;
+    unitCost: Dec | null;
+  },
 ) {
   if (!Number.isInteger(args.quantity) || args.quantity <= 0) throw new DomainError("Quantidade inválida.");
   await tx.$queryRaw`SELECT id FROM products WHERE id = ${args.productId}::uuid FOR UPDATE`;
@@ -91,7 +94,7 @@ export async function addStockTx(
       type: args.type,
       quantity: args.quantity,
       balanceAfter: updated.currentStock,
-      unitCost: args.type === "ADJUSTMENT_IN" ? product.averageCost : args.unitCost?.toFixed(4) ?? null,
+      unitCost: args.type === "ADJUSTMENT_IN" ? product.averageCost : (args.unitCost?.toFixed(4) ?? null),
       averageCostAfter: updated.averageCost,
       reason: args.reason ?? null,
       notes: args.notes ?? null,
@@ -250,7 +253,8 @@ export async function createProduct(actor: Actor, input: CreateProductInput): Pr
       return toProductView(await tx.product.findUniqueOrThrow({ where: { id: product.id } }));
     });
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError(`Já existe um produto com o SKU ${data.sku}.`, "DUPLICATE_SKU", "sku");
+    if (isUniqueViolation(error))
+      throw new DomainError(`Já existe um produto com o SKU ${data.sku}.`, "DUPLICATE_SKU", "sku");
     throw error;
   }
 }
@@ -298,16 +302,22 @@ export async function updateProduct(actor: Actor, input: UpdateProductInput): Pr
 
 type StockEntryData = ReturnType<typeof stockEntrySchema.parse>;
 
-async function registerStockEntryTx(tx: Tx, actor: Actor, input: Omit<StockEntryInput, "idempotencyKey"> & { idempotencyKey?: string }) {
+async function registerStockEntryTx(
+  tx: Tx,
+  actor: Actor,
+  input: Omit<StockEntryInput, "idempotencyKey"> & { idempotencyKey?: string },
+) {
   const data: StockEntryData = stockEntrySchema.parse(input);
   const tz = await getTimezone(tx);
   const entryDate = parseBusinessDateTime(data.entryDate, tz, "a data da entrada", "entryDate");
 
   const product = await tx.product.findUnique({ where: { id: data.productId } });
   if (!product) throw new NotFoundError("Produto não encontrado.");
-  if (!product.active) throw new DomainError("Produto inativo. Reative-o antes de registrar entradas.", "INACTIVE_PRODUCT");
+  if (!product.active)
+    throw new DomainError("Produto inativo. Reative-o antes de registrar entradas.", "INACTIVE_PRODUCT");
 
-  const unitCost = data.unitCostCents === null || data.unitCostCents === undefined ? null : fromCents(data.unitCostCents);
+  const unitCost =
+    data.unitCostCents === null || data.unitCostCents === undefined ? null : fromCents(data.unitCostCents);
   const totalCost = unitCost === null ? null : round2(unitCost.mul(data.quantity));
 
   let cashAccountId: string | null = null;
@@ -385,7 +395,9 @@ async function registerStockEntryTx(tx: Tx, actor: Actor, input: Omit<StockEntry
 export async function registerStockEntry(actor: Actor, input: StockEntryInput) {
   const data = stockEntrySchema.parse(input);
   const findExisting = () =>
-    data.idempotencyKey ? prisma.stockEntry.findUnique({ where: { idempotencyKey: data.idempotencyKey } }) : Promise.resolve(null);
+    data.idempotencyKey
+      ? prisma.stockEntry.findUnique({ where: { idempotencyKey: data.idempotencyKey } })
+      : Promise.resolve(null);
   return runIdempotent(
     data.idempotencyKey,
     () =>
@@ -586,7 +598,9 @@ export interface StockEntryView {
   paymentMethod: string | null;
 }
 
-export async function listStockEntries(filters: { productId?: string } & PageParams): Promise<Paginated<StockEntryView>> {
+export async function listStockEntries(
+  filters: { productId?: string } & PageParams,
+): Promise<Paginated<StockEntryView>> {
   const { page, pageSize, skip, take } = pageArgs(filters);
   const where = filters.productId ? { productId: filters.productId } : {};
   const [rows, total] = await Promise.all([
@@ -628,6 +642,7 @@ export interface InventoryOverview {
   lowStock: number;
   outOfStock: number;
   missingCost: number;
+  minStockTotal: number;
 }
 
 export async function getInventoryOverview(db: Tx = prisma): Promise<InventoryOverview> {
@@ -647,5 +662,6 @@ export async function getInventoryOverview(db: Tx = prisma): Promise<InventoryOv
     lowStock: products.filter((p) => stockStatus(p) === "low").length,
     outOfStock: products.filter((p) => stockStatus(p) === "out").length,
     missingCost: products.filter((p) => p.averageCost === null).length,
+    minStockTotal: products.reduce((acc, p) => acc + p.minStock, 0),
   };
 }

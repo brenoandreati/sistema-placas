@@ -19,7 +19,17 @@ import {
   updateSale,
 } from "@/server/services/sales";
 import { registerWithdrawal, reverseWithdrawal } from "@/server/services/withdrawals";
-import { TZ, categoryId, key, makeCustomer, makeProduct, now, paymentMethodId, resetDatabase, setBalance } from "./helpers";
+import {
+  TZ,
+  categoryId,
+  key,
+  makeCustomer,
+  makeProduct,
+  now,
+  paymentMethodId,
+  resetDatabase,
+  setBalance,
+} from "./helpers";
 
 let actor: Actor;
 
@@ -34,7 +44,13 @@ afterAll(async () => {
 const balance = async () => (await getTotalBalance()).toNumber();
 const D = (v: number | string) => new Decimal(v);
 
-async function sellOne(productId: string, customerId: string, quantity: number, status: "PAID" | "PENDING" = "PENDING", idem?: string) {
+async function sellOne(
+  productId: string,
+  customerId: string,
+  quantity: number,
+  status: "PAID" | "PENDING" = "PENDING",
+  idem?: string,
+) {
   return createSale(actor, {
     customerId,
     items: [{ productId, quantity, unitPriceCents: 3000 }],
@@ -69,7 +85,9 @@ describe("regras puras", () => {
     expect(derivePaymentStatus({ ...base, amountPaid: D(0) })).toBe("PENDING");
     expect(derivePaymentStatus({ ...base, amountPaid: D(50) })).toBe("PARTIAL");
     expect(derivePaymentStatus({ ...base, amountPaid: D(150) })).toBe("PAID");
-    expect(derivePaymentStatus({ ...base, amountPaid: D(0), amountRefunded: D(150), cancelled: true })).toBe("REFUNDED");
+    expect(derivePaymentStatus({ ...base, amountPaid: D(0), amountRefunded: D(150), cancelled: true })).toBe(
+      "REFUNDED",
+    );
     expect(derivePaymentStatus({ ...base, amountPaid: D(0), cancelled: true })).toBe("CANCELLED");
   });
 });
@@ -109,11 +127,26 @@ describe("estoque", () => {
     await expect(
       adjustStock(actor, { productId: product.id, direction: "OUT", quantity: 1, reason: "", occurredAt: now() }),
     ).rejects.toThrow();
-    await adjustStock(actor, { productId: product.id, direction: "OUT", quantity: 2, reason: "Placas danificadas", occurredAt: now() });
+    await adjustStock(actor, {
+      productId: product.id,
+      direction: "OUT",
+      quantity: 2,
+      reason: "Placas danificadas",
+      occurredAt: now(),
+    });
     await expect(
-      adjustStock(actor, { productId: product.id, direction: "OUT", quantity: 50, reason: "Contagem física", occurredAt: now() }),
+      adjustStock(actor, {
+        productId: product.id,
+        direction: "OUT",
+        quantity: 50,
+        reason: "Contagem física",
+        occurredAt: now(),
+      }),
     ).rejects.toThrow(/Estoque insuficiente/);
-    const movements = await prisma.stockMovement.findMany({ where: { productId: product.id }, orderBy: { number: "asc" } });
+    const movements = await prisma.stockMovement.findMany({
+      where: { productId: product.id },
+      orderBy: { number: "asc" },
+    });
     expect(movements.map((m) => [m.type, m.quantity, m.balanceAfter])).toEqual([
       ["ENTRY", 10, 10],
       ["ADJUSTMENT_OUT", -2, 8],
@@ -148,7 +181,12 @@ describe("estoque", () => {
     const period = resolvePeriod("today", TZ);
     expect((await getProfitMetrics(period)).complete).toBe(false);
 
-    await setAverageCost(actor, { productId: product.id, unitCostCents: 1200, reason: "Nota fiscal localizada", applyToUnknownSales: true });
+    await setAverageCost(actor, {
+      productId: product.id,
+      unitCostCents: 1200,
+      reason: "Nota fiscal localizada",
+      applyToUnknownSales: true,
+    });
     const profit = await getProfitMetrics(period);
     expect(profit.complete).toBe(true);
     expect(profit.costOfGoodsSold).toBe(24);
@@ -162,11 +200,26 @@ describe("pagamentos", () => {
     const customer = await makeCustomer(actor);
     const sale = await sellOne(product.id, customer.id, 5);
     await expect(
-      registerPayment(actor, { saleId: sale.id, amountCents: 15_001, paymentMethodId: await paymentMethodId(), paidAt: now() }),
+      registerPayment(actor, {
+        saleId: sale.id,
+        amountCents: 15_001,
+        paymentMethodId: await paymentMethodId(),
+        paidAt: now(),
+      }),
     ).rejects.toThrow(/excede o saldo pendente/);
-    await registerPayment(actor, { saleId: sale.id, amountCents: 15_000, paymentMethodId: await paymentMethodId(), paidAt: now() });
+    await registerPayment(actor, {
+      saleId: sale.id,
+      amountCents: 15_000,
+      paymentMethodId: await paymentMethodId(),
+      paidAt: now(),
+    });
     await expect(
-      registerPayment(actor, { saleId: sale.id, amountCents: 100, paymentMethodId: await paymentMethodId(), paidAt: now() }),
+      registerPayment(actor, {
+        saleId: sale.id,
+        amountCents: 100,
+        paymentMethodId: await paymentMethodId(),
+        paidAt: now(),
+      }),
     ).rejects.toThrow(/quitada/);
   });
 
@@ -183,7 +236,13 @@ describe("pagamentos", () => {
     expect((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).currentStock).toBe(8);
 
     const paymentKey = key();
-    const input = { saleId: a.id, amountCents: 1000, paymentMethodId: await paymentMethodId(), paidAt: now(), idempotencyKey: paymentKey };
+    const input = {
+      saleId: a.id,
+      amountCents: 1000,
+      paymentMethodId: await paymentMethodId(),
+      paidAt: now(),
+      idempotencyKey: paymentKey,
+    };
     await registerPayment(actor, input);
     await registerPayment(actor, input);
     expect(await prisma.payment.count()).toBe(1);
@@ -196,9 +255,19 @@ describe("pagamentos", () => {
     const sale = await sellOne(product.id, customer.id, 5, "PAID");
     const receipt = await prisma.payment.findFirstOrThrow({ where: { saleId: sale.id } });
     await expect(
-      refundPayment(actor, { paymentId: receipt.id, amountCents: 20_000, paidAt: now(), reason: "Valor lançado errado" }),
+      refundPayment(actor, {
+        paymentId: receipt.id,
+        amountCents: 20_000,
+        paidAt: now(),
+        reason: "Valor lançado errado",
+      }),
     ).rejects.toThrow(/excede/);
-    await refundPayment(actor, { paymentId: receipt.id, amountCents: 15_000, paidAt: now(), reason: "Pagamento não compensado" });
+    await refundPayment(actor, {
+      paymentId: receipt.id,
+      amountCents: 15_000,
+      paidAt: now(),
+      reason: "Pagamento não compensado",
+    });
     const updated = await prisma.sale.findUniqueOrThrow({ where: { id: sale.id } });
     expect(updated.paymentStatus).toBe("PENDING");
     expect(Number(updated.amountPaid)).toBe(0);
@@ -228,7 +297,13 @@ describe("caixa e retiradas", () => {
     const method = await paymentMethodId();
     const results = await Promise.allSettled(
       [1, 2, 3].map(() =>
-        registerWithdrawal(actor, { amountCents: 4_000, withdrawnAt: now(), paymentMethodId: method, categoryId: category, description: "Concorrente" }),
+        registerWithdrawal(actor, {
+          amountCents: 4_000,
+          withdrawnAt: now(),
+          paymentMethodId: method,
+          categoryId: category,
+          description: "Concorrente",
+        }),
       ),
     );
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(2);
@@ -247,7 +322,9 @@ describe("caixa e retiradas", () => {
     expect(await balance()).toBe(70);
     await reverseWithdrawal(actor, { withdrawalId: withdrawal.id, reason: "Registro duplicado" });
     expect(await balance()).toBe(100);
-    await expect(reverseWithdrawal(actor, { withdrawalId: withdrawal.id, reason: "De novo" })).rejects.toThrow(/já foi estornada/);
+    await expect(reverseWithdrawal(actor, { withdrawalId: withdrawal.id, reason: "De novo" })).rejects.toThrow(
+      /já foi estornada/,
+    );
     const transactions = await prisma.financialTransaction.findMany({ where: { withdrawalId: withdrawal.id } });
     expect(transactions.map((t) => t.origin).sort()).toEqual(["REVERSAL", "WITHDRAWAL"]);
     const log = await prisma.auditLog.findFirstOrThrow({ where: { action: "withdrawal.reverse" } });
@@ -272,7 +349,9 @@ describe("caixa e retiradas", () => {
     await reverseTransaction(actor, { transactionId: tx.id, reason: "Despesa de outro negócio" });
     expect((await getProfitMetrics(period)).profit).toBe(100);
     expect(await prisma.financialTransaction.count({ where: { expenseId: expense.id } })).toBe(2);
-    await expect(reverseTransaction(actor, { transactionId: tx.id, reason: "Repetido" })).rejects.toThrow(/já foi estornado/);
+    await expect(reverseTransaction(actor, { transactionId: tx.id, reason: "Repetido" })).rejects.toThrow(
+      /já foi estornado/,
+    );
   });
 
   it("aporte aumenta o caixa sem virar receita de vendas", async () => {
@@ -292,7 +371,12 @@ describe("caixa e retiradas", () => {
     await setBalance(actor, 10_000);
     const future = toLocalDateTimeInput(new Date(Date.now() + 3 * 86_400_000), TZ);
     await expect(
-      registerExpense(actor, { amountCents: 100, incurredAt: future, categoryId: await categoryId("Frete"), description: "x" }),
+      registerExpense(actor, {
+        amountCents: 100,
+        incurredAt: future,
+        categoryId: await categoryId("Frete"),
+        description: "x",
+      }),
     ).rejects.toThrow(/futuro/);
   });
 });
@@ -308,7 +392,9 @@ describe("integridade no banco", () => {
       description: "Teste",
     });
     const tx = await prisma.financialTransaction.findFirstOrThrow();
-    await expect(prisma.financialTransaction.update({ where: { id: tx.id }, data: { amount: "1.00" } })).rejects.toThrow();
+    await expect(
+      prisma.financialTransaction.update({ where: { id: tx.id }, data: { amount: "1.00" } }),
+    ).rejects.toThrow();
     await expect(prisma.financialTransaction.delete({ where: { id: tx.id } })).rejects.toThrow();
     await expect(prisma.auditLog.deleteMany({})).rejects.toThrow();
   });
@@ -321,11 +407,18 @@ describe("integridade no banco", () => {
 
 describe("clientes", () => {
   it("evita duplicidade por e-mail, telefone e CNPJ", async () => {
-    await createCustomer(actor, { businessName: "Ótica Visão", contactName: "João", email: "contato@otica.com", phone: "(11) 98765-4321" });
+    await createCustomer(actor, {
+      businessName: "Ótica Visão",
+      contactName: "João",
+      email: "contato@otica.com",
+      phone: "(11) 98765-4321",
+    });
     await expect(
       createCustomer(actor, { businessName: "Outra", contactName: "Ana", email: "CONTATO@otica.com" }),
     ).rejects.toThrow(/e-mail/);
-    await expect(createCustomer(actor, { businessName: "Outra", contactName: "Ana", phone: "11987654321" })).rejects.toThrow(/telefone/);
+    await expect(
+      createCustomer(actor, { businessName: "Outra", contactName: "Ana", phone: "11987654321" }),
+    ).rejects.toThrow(/telefone/);
     await expect(createCustomer(actor, { businessName: "X", contactName: "Y", email: "invalido" })).rejects.toThrow();
   });
 
@@ -351,7 +444,13 @@ describe("compra de estoque sem pagamento", () => {
     expect(stored.averageCost).toBeNull();
     expect(await balance()).toBe(0);
     await expect(
-      registerStockEntry(actor, { productId: product.id, quantity: 10, entryDate: now(), paidNow: true, paymentMethodId: await paymentMethodId() }),
+      registerStockEntry(actor, {
+        productId: product.id,
+        quantity: 10,
+        entryDate: now(),
+        paidNow: true,
+        paymentMethodId: await paymentMethodId(),
+      }),
     ).rejects.toThrow();
   });
 });

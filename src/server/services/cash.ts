@@ -48,7 +48,10 @@ export async function getAccountBalance(db: Tx, cashAccountId: string): Promise<
 
 /** Saldo consolidado de todas as contas ativas. */
 export async function getTotalBalance(db: Tx = prisma): Promise<Dec> {
-  const accounts = await db.cashAccount.findMany({ where: { active: true }, select: { id: true, openingBalance: true } });
+  const accounts = await db.cashAccount.findMany({
+    where: { active: true },
+    select: { id: true, openingBalance: true },
+  });
   if (accounts.length === 0) return dec(0);
   const ids = accounts.map((a) => a.id);
   const sums = await db.financialTransaction.groupBy({
@@ -75,6 +78,7 @@ export async function getSystemCategory(db: Tx, systemKey: string): Promise<Fina
 
 export async function getActivePaymentMethod(db: Tx, paymentMethodId: string) {
   const method = await db.paymentMethod.findUnique({ where: { id: paymentMethodId } });
-  if (!method || !method.active) throw new DomainError("Forma de pagamento inválida ou inativa.", "INVALID_PAYMENT_METHOD", "paymentMethodId");
+  if (!method || !method.active)
+    throw new DomainError("Forma de pagamento inválida ou inativa.", "INVALID_PAYMENT_METHOD", "paymentMethodId");
   return method;
 }

@@ -57,7 +57,11 @@ export async function changePasswordAction(input: {
     const data = changePasswordSchema.parse(input);
     const user = await prisma.user.findUniqueOrThrow({ where: { id: session.user.id } });
     if (!(await verifyPassword(data.currentPassword, user.passwordHash))) {
-      return { ok: false, error: "Senha atual incorreta.", fieldErrors: { currentPassword: ["Senha atual incorreta."] } };
+      return {
+        ok: false,
+        error: "Senha atual incorreta.",
+        fieldErrors: { currentPassword: ["Senha atual incorreta."] },
+      };
     }
     await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(data.newPassword) } });

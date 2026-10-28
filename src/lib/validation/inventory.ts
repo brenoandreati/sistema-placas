@@ -1,14 +1,5 @@
 import { z } from "zod";
-import {
-  cents,
-  idempotencyKey,
-  localDateTime,
-  optionalText,
-  quantity,
-  reason,
-  requiredText,
-  uuid,
-} from "./common";
+import { cents, idempotencyKey, localDateTime, optionalText, quantity, reason, requiredText, uuid } from "./common";
 
 export const productSchema = z.object({
   name: requiredText("o nome do produto", 120),

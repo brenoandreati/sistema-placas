@@ -1,26 +1,148 @@
 @import "tailwindcss";
 
+/*
+ * Tokens de design — painel de gestão de placas NFC.
+ * Fundo claro e frio, azul cobalto para interação, verde/vermelho reservados para
+ * entradas e saídas de dinheiro, âmbar para atenção. Números sempre tabulares.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --ink: #111a27;
+  --ink-2: #445063;
+  --muted: #6f7a8b;
+  --line: #e3e7ed;
+  --line-strong: #cfd5de;
+
+  --primary: #2251d1;
+  --primary-hover: #1b43b0;
+  --primary-soft: #ebf0fd;
+  --primary-ink: #173a99;
+
+  --positive: #0b7f54;
+  --positive-soft: #e6f4ed;
+  --negative: #c4343a;
+  --negative-soft: #fbeced;
+  --warning: #9a5b00;
+  --warning-soft: #fdf3e1;
+
+  /* Paleta dos gráficos (validada para daltonismo e contraste sobre branco). */
+  --chart-sold: #2251d1;
+  --chart-in: #14a56e;
+  --chart-expense: #b8292f;
+  --chart-withdrawal: #7a5af0;
+  --chart-grid: #edf0f4;
+  --chart-axis: #8a94a3;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), var(--font-body), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-code), ui-monospace, monospace;
+
+  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgb(17 26 39 / 0.04), 0 0 0 1px rgb(17 26 39 / 0.02);
+  --shadow-pop: 0 12px 32px -8px rgb(17 26 39 / 0.18), 0 2px 6px rgb(17 26 39 / 0.06);
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-slide-in-right: slide-in-right 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(24px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      transform: translateY(6px) scale(0.98);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
   }
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números de valores e quantidades sempre alinhados em colunas. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Números grandes isolados usam algarismos proporcionais. */
+.figure {
+  font-feature-settings:
+    "pnum" 1,
+    "tnum" 0;
+  font-variant-numeric: proportional-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Inputs numéricos sem setas (valores são digitados). */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }

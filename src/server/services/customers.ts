@@ -87,11 +87,7 @@ function toDbData(data: CustomerData) {
 }
 
 /** Evita duplicidades evidentes: mesmo CNPJ, e-mail ou telefone de outro cliente. */
-async function assertNoDuplicate(
-  tx: Tx,
-  data: Pick<CustomerData, "cnpj" | "email" | "phone">,
-  exceptId?: string,
-) {
+async function assertNoDuplicate(tx: Tx, data: Pick<CustomerData, "cnpj" | "email" | "phone">, exceptId?: string) {
   const checks: { field: "cnpj" | "email" | "phone"; label: string; value: string | undefined; display: string }[] = [
     { field: "cnpj", label: "CNPJ", value: data.cnpj, display: formatCnpj(data.cnpj) },
     { field: "email", label: "e-mail", value: data.email, display: data.email ?? "" },
@@ -259,7 +255,9 @@ export async function listCustomers(filters: CustomerFilters): Promise<Paginated
     const digits = search.replace(/\D/g, "");
     conditions.push(
       Prisma.sql`(c.business_name ILIKE ${like} OR c.contact_name ILIKE ${like} OR c.email ILIKE ${like} OR c.legal_name ILIKE ${like}${
-        digits.length >= 3 ? Prisma.sql` OR c.phone LIKE ${`%${digits}%`} OR c.whatsapp LIKE ${`%${digits}%`} OR c.cnpj LIKE ${`%${digits}%`}` : Prisma.empty
+        digits.length >= 3
+          ? Prisma.sql` OR c.phone LIKE ${`%${digits}%`} OR c.whatsapp LIKE ${`%${digits}%`} OR c.cnpj LIKE ${`%${digits}%`}`
+          : Prisma.empty
       })`,
     );
   }
@@ -368,4 +366,117 @@ export async function searchCustomerOptions(search?: string, limit = 50) {
 export async function getCustomer(customerId: string): Promise<CustomerView | null> {
   const customer = await prisma.customer.findUnique({ where: { id: customerId } });
   return customer ? toCustomerView(customer) : null;
+}
+
+// ───────────────────────── Ficha do cliente ─────────────────────────
+
+export interface CustomerDetail {
+  customer: CustomerView;
+  summary: {
+    orders: number;
+    units: number;
+    totalPurchased: number;
+    totalPaid: number;
+    pending: number;
+    refundDue: number;
+    lastPurchaseAt: string | null;
+    firstPurchaseAt: string | null;
+    cancelledOrders: number;
+  };
+  sales: {
+    id: string;
+    number: number;
+    saleDate: string;
+    units: number;
+    total: number;
+    amountPaid: number;
+    pending: number;
+    status: string;
+    paymentStatus: string;
+    dueDate: string | null;
+  }[];
+  payments: {
+    id: string;
+    number: number;
+    saleId: string;
+    saleNumber: number;
+    kind: "RECEIPT" | "REFUND";
+    amount: number;
+    paidAt: string;
+    paymentMethod: string;
+    reason: string | null;
+  }[];
+  history: { id: string; summary: string; createdAt: string; user: string | null }[];
+}
+
+export async function getCustomerDetail(customerId: string): Promise<CustomerDetail | null> {
+  const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+  if (!customer) return null;
+  const [sales, payments, logs] = await Promise.all([
+    prisma.sale.findMany({
+      where: { customerId },
+      orderBy: [{ saleDate: "desc" }, { number: "desc" }],
+      include: { items: { select: { quantity: true } } },
+    }),
+    prisma.payment.findMany({
+      where: { sale: { customerId } },
+      orderBy: [{ paidAt: "desc" }, { number: "desc" }],
+      include: { sale: { select: { number: true } }, paymentMethod: { select: { name: true } } },
+    }),
+    prisma.auditLog.findMany({
+      where: { entityType: "customer", entityId: customerId },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: { user: { select: { name: true } } },
+    }),
+  ]);
+
+  const active = sales.filter((s) => s.status !== "CANCELLED");
+  const sumDec = (values: Prisma.Decimal[]) => values.reduce((acc, v) => acc.add(v), new Prisma.Decimal(0));
+  const totalPurchased = sumDec(active.map((s) => s.total));
+  const totalPaid = sumDec(active.map((s) => s.amountPaid));
+  const refundDue = sumDec(sales.filter((s) => s.status === "CANCELLED").map((s) => s.amountPaid));
+  return {
+    customer: toCustomerView(customer),
+    summary: {
+      orders: active.length,
+      units: active.reduce((acc, s) => acc + s.items.reduce((a, i) => a + i.quantity, 0), 0),
+      totalPurchased: num(totalPurchased),
+      totalPaid: num(totalPaid),
+      pending: num(totalPurchased.sub(totalPaid)),
+      refundDue: num(refundDue),
+      lastPurchaseAt: active[0]?.saleDate.toISOString() ?? null,
+      firstPurchaseAt: active.at(-1)?.saleDate.toISOString() ?? null,
+      cancelledOrders: sales.length - active.length,
+    },
+    sales: sales.map((s) => ({
+      id: s.id,
+      number: s.number,
+      saleDate: s.saleDate.toISOString(),
+      units: s.items.reduce((a, i) => a + i.quantity, 0),
+      total: num(s.total),
+      amountPaid: num(s.amountPaid),
+      pending: s.status === "CANCELLED" ? 0 : num(s.total.sub(s.amountPaid)),
+      status: s.status,
+      paymentStatus: s.paymentStatus,
+      dueDate: s.dueDate ? s.dueDate.toISOString().slice(0, 10) : null,
+    })),
+    payments: payments.map((p) => ({
+      id: p.id,
+      number: p.number,
+      saleId: p.saleId,
+      saleNumber: p.sale.number,
+      kind: p.kind,
+      amount: num(p.amount),
+      paidAt: p.paidAt.toISOString(),
+      paymentMethod: p.paymentMethod.name,
+      reason: p.reason,
+    })),
+    history: logs.map((l) => ({
+      id: l.id,
+      summary: l.summary,
+      createdAt: l.createdAt.toISOString(),
+      user: l.user?.name ?? null,
+    })),
+  };
 }

@@ -116,7 +116,10 @@ export const settingsSchema = z.object({
   defaultDueDays: z.coerce.number().int().min(0, "Prazo inválido.").max(365, "Use no máximo 365 dias."),
   recentWithdrawalDays: z.coerce.number().int().min(1).max(90),
   dashboardDefaultPeriod: z.enum(PERIOD_PRESETS.filter((p) => p !== "custom") as [string, ...string[]]),
-  pageSize: z.coerce.number().int().refine((v) => [10, 20, 50, 100].includes(v), "Valor inválido."),
+  pageSize: z.coerce
+    .number()
+    .int()
+    .refine((v) => [10, 20, 50, 100].includes(v), "Valor inválido."),
   allowNegativeBalance: z.boolean(),
 });
 export type SettingsInput = z.input<typeof settingsSchema>;

@@ -62,9 +62,18 @@ export function computeSaleTotals(
 ): SaleTotals {
   const subtotal = round2(items.reduce((acc, i) => acc.add(i.unitPrice.mul(i.quantity)), dec(0)));
   if (discount.greaterThan(subtotal)) {
-    throw new DomainError("O desconto não pode ser maior que o total dos produtos.", "INVALID_DISCOUNT", "discountCents");
+    throw new DomainError(
+      "O desconto não pode ser maior que o total dos produtos.",
+      "INVALID_DISCOUNT",
+      "discountCents",
+    );
   }
-  return { subtotal, discount: round2(discount), shipping: round2(shipping), total: round2(subtotal.sub(discount).add(shipping)) };
+  return {
+    subtotal,
+    discount: round2(discount),
+    shipping: round2(shipping),
+    total: round2(subtotal.sub(discount).add(shipping)),
+  };
 }
 
 /**
@@ -224,7 +233,9 @@ async function syncSalePaymentsTx(tx: Tx, saleId: string): Promise<Sale> {
 export async function createSale(actor: Actor, input: CreateSaleInput) {
   const data = createSaleSchema.parse(input);
   const findExisting = () =>
-    data.idempotencyKey ? prisma.sale.findUnique({ where: { idempotencyKey: data.idempotencyKey } }) : Promise.resolve(null);
+    data.idempotencyKey
+      ? prisma.sale.findUnique({ where: { idempotencyKey: data.idempotencyKey } })
+      : Promise.resolve(null);
 
   return runIdempotent(
     data.idempotencyKey,
@@ -240,7 +251,12 @@ export async function createSale(actor: Actor, input: CreateSaleInput) {
 
         const customer = await tx.customer.findUnique({ where: { id: data.customerId } });
         if (!customer) throw new NotFoundError("Cliente não encontrado.");
-        if (!customer.active) throw new DomainError("Cliente desativado. Reative o cadastro para vender.", "INACTIVE_CUSTOMER", "customerId");
+        if (!customer.active)
+          throw new DomainError(
+            "Cliente desativado. Reative o cadastro para vender.",
+            "INACTIVE_CUSTOMER",
+            "customerId",
+          );
         const paymentMethod = await getActivePaymentMethod(tx, data.paymentMethodId);
 
         const products = await tx.product.findMany({ where: { id: { in: data.items.map((i) => i.productId) } } });
@@ -388,13 +404,15 @@ export async function updateSale(actor: Actor, input: UpdateSaleInput) {
   const data = updateSaleSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     const sale = await lockSale(tx, data.saleId);
-    if (sale.status === "CANCELLED") throw new DomainError("Vendas canceladas não podem ser editadas.", "SALE_CANCELLED");
+    if (sale.status === "CANCELLED")
+      throw new DomainError("Vendas canceladas não podem ser editadas.", "SALE_CANCELLED");
     const settings = await getSettings(tx);
     const saleDate = parseBusinessDateTime(data.saleDate, settings.timezone, "a data da venda", "saleDate");
 
     if (data.customerId !== sale.customerId) {
       const customer = await tx.customer.findUnique({ where: { id: data.customerId } });
-      if (!customer || !customer.active) throw new DomainError("Cliente inválido ou desativado.", "INVALID_CUSTOMER", "customerId");
+      if (!customer || !customer.active)
+        throw new DomainError("Cliente inválido ou desativado.", "INVALID_CUSTOMER", "customerId");
     }
     if (data.paymentMethodId !== sale.paymentMethodId) await getActivePaymentMethod(tx, data.paymentMethodId);
 
@@ -402,7 +420,11 @@ export async function updateSale(actor: Actor, input: UpdateSaleInput) {
     const shipping = fromCents(data.shippingCents);
     const subtotal = dec(sale.subtotal);
     if (discount.greaterThan(subtotal)) {
-      throw new DomainError("O desconto não pode ser maior que o total dos produtos.", "INVALID_DISCOUNT", "discountCents");
+      throw new DomainError(
+        "O desconto não pode ser maior que o total dos produtos.",
+        "INVALID_DISCOUNT",
+        "discountCents",
+      );
     }
     const total = round2(subtotal.sub(discount).add(shipping));
     if (total.lessThan(dec(sale.amountPaid))) {
@@ -468,7 +490,8 @@ export async function updateSaleStatus(actor: Actor, input: { saleId: string; st
   const data = updateSaleStatusSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     const sale = await lockSale(tx, data.saleId);
-    if (sale.status === "CANCELLED") throw new DomainError("Vendas canceladas não podem mudar de status.", "SALE_CANCELLED");
+    if (sale.status === "CANCELLED")
+      throw new DomainError("Vendas canceladas não podem mudar de status.", "SALE_CANCELLED");
     if (sale.status === data.status) return sale;
     const updated = await tx.sale.update({
       where: { id: sale.id },
@@ -491,7 +514,9 @@ export async function updateSaleStatus(actor: Actor, input: { saleId: string; st
 export async function registerPayment(actor: Actor, input: RegisterPaymentInput) {
   const data = registerPaymentSchema.parse(input);
   const findExisting = () =>
-    data.idempotencyKey ? prisma.payment.findUnique({ where: { idempotencyKey: data.idempotencyKey } }) : Promise.resolve(null);
+    data.idempotencyKey
+      ? prisma.payment.findUnique({ where: { idempotencyKey: data.idempotencyKey } })
+      : Promise.resolve(null);
   return runIdempotent(
     data.idempotencyKey,
     () =>
@@ -547,7 +572,9 @@ export async function registerPayment(actor: Actor, input: RegisterPaymentInput)
 export async function refundPayment(actor: Actor, input: RefundPaymentInput) {
   const data = refundPaymentSchema.parse(input);
   const findExisting = () =>
-    data.idempotencyKey ? prisma.payment.findUnique({ where: { idempotencyKey: data.idempotencyKey } }) : Promise.resolve(null);
+    data.idempotencyKey
+      ? prisma.payment.findUnique({ where: { idempotencyKey: data.idempotencyKey } })
+      : Promise.resolve(null);
   return runIdempotent(
     data.idempotencyKey,
     () =>
@@ -565,8 +592,10 @@ export async function refundPayment(actor: Actor, input: RefundPaymentInput) {
           throw new DomainError("O estorno não pode ser anterior ao recebimento.", "INVALID_DATE", "paidAt");
         }
         const amount = fromCents(data.amountCents);
-        const refundable = (await refundableReceipts(tx, sale.id)).find((r) => r.receipt.id === receipt.id)?.refundable ?? dec(0);
-        if (refundable.lessThanOrEqualTo(0)) throw new DomainError("Este recebimento já foi totalmente estornado.", "ALREADY_REFUNDED");
+        const refundable =
+          (await refundableReceipts(tx, sale.id)).find((r) => r.receipt.id === receipt.id)?.refundable ?? dec(0);
+        if (refundable.lessThanOrEqualTo(0))
+          throw new DomainError("Este recebimento já foi totalmente estornado.", "ALREADY_REFUNDED");
         if (amount.greaterThan(refundable)) {
           throw new DomainError(
             `O valor excede o máximo estornável deste recebimento (${refundable.toFixed(2).replace(".", ",")}).`,
@@ -604,14 +633,19 @@ export async function settlePendingRefund(actor: Actor, input: SettleRefundInput
   const data = settleRefundSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     const sale = await lockSale(tx, data.saleId);
-    if (sale.status !== "CANCELLED") throw new DomainError("Somente vendas canceladas têm valores a devolver.", "SALE_NOT_CANCELLED");
+    if (sale.status !== "CANCELLED")
+      throw new DomainError("Somente vendas canceladas têm valores a devolver.", "SALE_NOT_CANCELLED");
     const settings = await getSettings(tx);
     const paidAt = parseBusinessDateTime(data.paidAt, settings.timezone, "a data da devolução", "paidAt");
     const amount = fromCents(data.amountCents);
     const due = dec(sale.amountPaid);
     if (due.lessThanOrEqualTo(0)) throw new DomainError("Não há valores a devolver nesta venda.", "NOTHING_TO_REFUND");
     if (amount.greaterThan(due)) {
-      throw new DomainError(`O valor excede o total a devolver (${due.toFixed(2).replace(".", ",")}).`, "AMOUNT_EXCEEDS_DUE", "amountCents");
+      throw new DomainError(
+        `O valor excede o total a devolver (${due.toFixed(2).replace(".", ",")}).`,
+        "AMOUNT_EXCEEDS_DUE",
+        "amountCents",
+      );
     }
     const customer = await tx.customer.findUniqueOrThrow({ where: { id: sale.customerId } });
     await refundAcrossReceiptsTx(tx, actor, sale, amount, paidAt, data.reason, customer.businessName);
@@ -648,7 +682,8 @@ async function refundAcrossReceiptsTx(
     await createRefundTx(tx, actor, sale, receipt, { amount: part, paidAt: date, reason, customerName });
     remaining = remaining.sub(part);
   }
-  if (remaining.greaterThan(0)) throw new DomainError("Valor de estorno maior que o recebido.", "AMOUNT_EXCEEDS_REFUNDABLE");
+  if (remaining.greaterThan(0))
+    throw new DomainError("Valor de estorno maior que o recebido.", "AMOUNT_EXCEEDS_REFUNDABLE");
 }
 
 // ───────────────────────── Cancelamento ─────────────────────────
@@ -708,7 +743,15 @@ export async function cancelSale(actor: Actor, input: CancelSaleInput) {
 
     const paid = dec(sale.amountPaid);
     if (paid.greaterThan(0) && data.refundMode === "REFUND_NOW") {
-      await refundAcrossReceiptsTx(tx, actor, sale, paid, refundDate, `Cancelamento: ${data.reason}`, customer.businessName);
+      await refundAcrossReceiptsTx(
+        tx,
+        actor,
+        sale,
+        paid,
+        refundDate,
+        `Cancelamento: ${data.reason}`,
+        customer.businessName,
+      );
     }
     const updated = await syncSalePaymentsTx(tx, sale.id);
 
@@ -819,7 +862,12 @@ export async function listSales(filters: SaleFilters, tz: string): Promise<Pagin
     prisma.sale.count({ where }),
   ]);
   const today = toLocalDateString(new Date(), tz);
-  return paginated(rows.map((s) => toSaleListItem(s, today)), total, page, pageSize);
+  return paginated(
+    rows.map((s) => toSaleListItem(s, today)),
+    total,
+    page,
+    pageSize,
+  );
 }
 
 type SaleWithListRelations = Sale & {
@@ -906,7 +954,14 @@ export interface SaleDetail extends SaleListItem {
     transactionNumber: number | null;
     createdBy: string | null;
   }[];
-  history: { id: string; action: string; summary: string; reason: string | null; createdAt: string; user: string | null }[];
+  history: {
+    id: string;
+    action: string;
+    summary: string;
+    reason: string | null;
+    createdAt: string;
+    user: string | null;
+  }[];
   relatedExpenses: { id: string; number: number; description: string; amount: number; status: string }[];
 }
 
@@ -1049,7 +1104,10 @@ export interface ReceivableFilters extends PageParams {
 
 export async function listReceivables(filters: ReceivableFilters, tz: string) {
   const today = toLocalDateString(new Date(), tz);
-  const and: Prisma.SaleWhereInput[] = [{ status: { not: "CANCELLED" } }, { paymentStatus: { in: ["PENDING", "PARTIAL"] } }];
+  const and: Prisma.SaleWhereInput[] = [
+    { status: { not: "CANCELLED" } },
+    { paymentStatus: { in: ["PENDING", "PARTIAL"] } },
+  ];
   if (filters.customerId) and.push({ customerId: filters.customerId });
   if (filters.search?.trim()) {
     const term = filters.search.trim();

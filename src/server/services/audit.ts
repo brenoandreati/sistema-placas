@@ -1,7 +1,8 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import type { Actor } from "@/server/context";
-import type { Tx } from "@/server/db";
+import { prisma, type Tx } from "@/server/db";
+import { pageArgs, paginated } from "@/server/pagination";
 
 export interface AuditEntry {
   action: string;
@@ -30,4 +31,37 @@ export async function audit(tx: Tx, actor: Actor, entry: AuditEntry): Promise<vo
       metadata: entry.metadata,
     },
   });
+}
+
+export async function listAuditLogs(params: { page?: number; pageSize?: number; entityType?: string }) {
+  const { page, pageSize, skip, take } = pageArgs(params, 30);
+  const where = params.entityType ? { entityType: params.entityType } : {};
+  const [rows, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+      include: { user: { select: { name: true } } },
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+  return paginated(
+    rows.map((r) => ({
+      id: r.id,
+      action: r.action,
+      entityType: r.entityType,
+      entityId: r.entityId,
+      summary: r.summary,
+      reason: r.reason,
+      before: r.before,
+      after: r.after,
+      user: r.user?.name ?? null,
+      ipAddress: r.ipAddress,
+      createdAt: r.createdAt.toISOString(),
+    })),
+    total,
+    page,
+    pageSize,
+  );
 }

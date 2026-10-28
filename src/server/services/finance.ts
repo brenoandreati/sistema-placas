@@ -17,7 +17,7 @@ import {
   type ReverseTransactionInput,
 } from "@/lib/validation/finance";
 import type { Actor } from "@/server/context";
-import { prisma, type Tx } from "@/server/db";
+import { prisma } from "@/server/db";
 import { DomainError, NotFoundError, isUniqueViolation } from "@/server/errors";
 import { parseBusinessDateTime, runIdempotent } from "@/server/guards";
 import { dec, fromCents, num } from "@/server/money";
@@ -43,7 +43,9 @@ export const ORIGIN_LABELS: Record<TransactionOrigin, string> = {
 export async function registerExpense(actor: Actor, input: ExpenseInput) {
   const data = expenseSchema.parse(input);
   const findExisting = () =>
-    data.idempotencyKey ? prisma.expense.findUnique({ where: { idempotencyKey: data.idempotencyKey } }) : Promise.resolve(null);
+    data.idempotencyKey
+      ? prisma.expense.findUnique({ where: { idempotencyKey: data.idempotencyKey } })
+      : Promise.resolve(null);
   return runIdempotent(
     data.idempotencyKey,
     () =>
@@ -179,7 +181,8 @@ export async function reverseTransaction(actor: Actor, input: ReverseTransaction
       include: { reversal: { select: { id: true } } },
     });
     if (!original) throw new NotFoundError("Lançamento não encontrado.");
-    if (original.origin === "REVERSAL") throw new DomainError("Estornos não podem ser estornados.", "CANNOT_REVERSE_REVERSAL");
+    if (original.origin === "REVERSAL")
+      throw new DomainError("Estornos não podem ser estornados.", "CANNOT_REVERSE_REVERSAL");
     if (original.reversal) throw new DomainError("Este lançamento já foi estornado.", "ALREADY_REVERSED");
     if (original.origin === "SALE_PAYMENT" || original.origin === "SALE_REFUND") {
       throw new DomainError(
@@ -249,7 +252,11 @@ export interface LedgerEntry {
   balanceAfter: number;
   reversed: boolean;
   reversible: boolean;
-  reference: { type: "sale" | "withdrawal" | "expense" | "stock_entry" | "transaction"; id: string; label: string } | null;
+  reference: {
+    type: "sale" | "withdrawal" | "expense" | "stock_entry" | "transaction";
+    id: string;
+    label: string;
+  } | null;
   createdBy: string | null;
 }
 
@@ -336,7 +343,8 @@ export async function getLedger(filters: LedgerFilters): Promise<Paginated<Ledge
     const t = byId.get(id)!;
     const amount = num(t.amount);
     let reference: LedgerEntry["reference"] = null;
-    if (t.saleId && t.sale) reference = { type: "sale", id: t.saleId, label: `PED-${String(t.sale.number).padStart(5, "0")}` };
+    if (t.saleId && t.sale)
+      reference = { type: "sale", id: t.saleId, label: `PED-${String(t.sale.number).padStart(5, "0")}` };
     else if (t.withdrawalId && t.withdrawal)
       reference = { type: "withdrawal", id: t.withdrawalId, label: formatRecordNumber("RET", t.withdrawal.number) };
     else if (t.expenseId && t.expense)
@@ -392,7 +400,11 @@ export async function listCashAccounts() {
  * Define o saldo inicial do caixa. A primeira definição (implantação) dispensa justificativa;
  * alterações posteriores exigem motivo e ficam registradas na auditoria.
  */
-export async function setOpeningBalance(actor: Actor, input: OpeningBalanceInput, options: { initialSetup?: boolean } = {}) {
+export async function setOpeningBalance(
+  actor: Actor,
+  input: OpeningBalanceInput,
+  options: { initialSetup?: boolean } = {},
+) {
   const data = openingBalanceSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM cash_accounts WHERE id = ${data.cashAccountId}::uuid FOR UPDATE`;
@@ -470,10 +482,12 @@ export async function saveCategory(actor: Actor, input: CategoryInput) {
       if (data.categoryId) {
         const existing = await tx.financialCategory.findUnique({ where: { id: data.categoryId } });
         if (!existing) throw new NotFoundError("Categoria não encontrada.");
-        if (existing.systemKey) throw new DomainError("Categorias de sistema não podem ser alteradas.", "SYSTEM_CATEGORY");
+        if (existing.systemKey)
+          throw new DomainError("Categorias de sistema não podem ser alteradas.", "SYSTEM_CATEGORY");
         if (existing.group !== data.group) {
           const used = await tx.financialTransaction.count({ where: { categoryId: existing.id } });
-          if (used > 0) throw new DomainError("Categoria já utilizada: o grupo não pode ser alterado.", "CATEGORY_IN_USE");
+          if (used > 0)
+            throw new DomainError("Categoria já utilizada: o grupo não pode ser alterado.", "CATEGORY_IN_USE");
         }
         const updated = await tx.financialCategory.update({
           where: { id: existing.id },
@@ -516,7 +530,8 @@ export async function saveCategory(actor: Actor, input: CategoryInput) {
       return created;
     });
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError("Já existe uma categoria com esse nome neste grupo.", "DUPLICATE", "name");
+    if (isUniqueViolation(error))
+      throw new DomainError("Já existe uma categoria com esse nome neste grupo.", "DUPLICATE", "name");
     throw error;
   }
 }
@@ -562,7 +577,8 @@ export async function savePaymentMethod(actor: Actor, input: PaymentMethodInput)
       return created;
     });
   } catch (error) {
-    if (isUniqueViolation(error)) throw new DomainError("Já existe uma forma de pagamento com esse nome.", "DUPLICATE", "name");
+    if (isUniqueViolation(error))
+      throw new DomainError("Já existe uma forma de pagamento com esse nome.", "DUPLICATE", "name");
     throw error;
   }
 }

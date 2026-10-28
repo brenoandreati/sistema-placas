@@ -17,7 +17,9 @@
     "db:studio": "prisma studio",
     "user:create": "tsx scripts/create-user.ts",
     "backup": "bash scripts/backup.sh",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
@@ -25,7 +27,6 @@
     "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.62.0",
     "next": "16.4.3",
@@ -48,6 +49,8 @@
     "dotenv": "^18.0.9",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1",
     "prisma": "^7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

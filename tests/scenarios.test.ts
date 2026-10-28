@@ -9,7 +9,17 @@ import { registerStockEntry } from "@/server/services/inventory";
 import { findDivergences, getCashFlowMetrics, getProfitMetrics, getSalesMetrics } from "@/server/services/metrics";
 import { cancelSale, createSale, registerPayment } from "@/server/services/sales";
 import { getWithdrawalSummary, listWithdrawals, registerWithdrawal } from "@/server/services/withdrawals";
-import { TZ, categoryId, key, makeCustomer, makeProduct, now, paymentMethodId, resetDatabase, setBalance } from "./helpers";
+import {
+  TZ,
+  categoryId,
+  key,
+  makeCustomer,
+  makeProduct,
+  now,
+  paymentMethodId,
+  resetDatabase,
+  setBalance,
+} from "./helpers";
 
 let actor: Actor;
 const today = () => resolvePeriod("today", TZ);
@@ -190,7 +200,11 @@ describe("Cenário E — retirada", () => {
     expect(await getSalesMetrics(today())).toEqual(salesBefore);
     const history = await listWithdrawals({});
     expect(history.items).toHaveLength(1);
-    expect(history.items[0]).toMatchObject({ amount: 250, category: "Retirada pessoal do proprietário", status: "ACTIVE" });
+    expect(history.items[0]).toMatchObject({
+      amount: 250,
+      category: "Retirada pessoal do proprietário",
+      status: "ACTIVE",
+    });
     // Retirada não é despesa operacional.
     const cash = await getCashFlowMetrics(today());
     expect(cash.withdrawals).toBe(250);
@@ -229,7 +243,10 @@ describe("Cenário F — cancelamento de venda confirmada", () => {
 
     const payments = await prisma.payment.findMany({ where: { saleId: sale.id }, orderBy: { number: "asc" } });
     expect(payments.map((p) => p.kind)).toEqual(["RECEIPT", "REFUND"]);
-    const ledger = await prisma.financialTransaction.findMany({ where: { saleId: sale.id }, orderBy: { number: "asc" } });
+    const ledger = await prisma.financialTransaction.findMany({
+      where: { saleId: sale.id },
+      orderBy: { number: "asc" },
+    });
     expect(ledger.map((t) => `${t.direction}:${t.origin}`)).toEqual(["IN:SALE_PAYMENT", "OUT:SALE_REFUND"]);
 
     const metrics = await getSalesMetrics(today());

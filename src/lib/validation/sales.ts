@@ -22,10 +22,7 @@ export const SALE_STATUSES = ["REGISTERED", "PREPARING", "SHIPPED", "DELIVERED"]
 export const createSaleSchema = z
   .object({
     customerId: uuid,
-    items: z
-      .array(saleItemSchema)
-      .min(1, "Adicione ao menos um produto.")
-      .max(20, "Use no máximo 20 itens por venda."),
+    items: z.array(saleItemSchema).min(1, "Adicione ao menos um produto.").max(20, "Use no máximo 20 itens por venda."),
     saleDate: localDateTime("a data da venda"),
     paymentMethodId: uuid,
     paymentStatus: z.enum(["PENDING", "PARTIAL", "PAID"], "Escolha o status do pagamento."),

@@ -28,7 +28,11 @@ export async function getAlerts(tz: string, recentWithdrawalDays: number): Promi
     await Promise.all([
       prisma.product.findMany({ where: { active: true } }),
       prisma.sale.findMany({
-        where: { status: { not: "CANCELLED" }, paymentStatus: { in: ["PENDING", "PARTIAL"] }, dueDate: { lt: todayDb } },
+        where: {
+          status: { not: "CANCELLED" },
+          paymentStatus: { in: ["PENDING", "PARTIAL"] },
+          dueDate: { lt: todayDb },
+        },
         include: { customer: { select: { businessName: true } } },
         orderBy: { dueDate: "asc" },
       }),

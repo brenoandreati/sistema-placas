@@ -37,7 +37,12 @@ export async function registerWithdrawal(actor: Actor, input: WithdrawalInput): 
           if (existing) return existing;
         }
         const settings = await getSettings(tx);
-        const withdrawnAt = parseBusinessDateTime(data.withdrawnAt, settings.timezone, "a data da retirada", "withdrawnAt");
+        const withdrawnAt = parseBusinessDateTime(
+          data.withdrawnAt,
+          settings.timezone,
+          "a data da retirada",
+          "withdrawnAt",
+        );
         const category = await tx.financialCategory.findUnique({ where: { id: data.categoryId } });
         if (!category || category.group !== "WITHDRAWAL" || !category.active) {
           throw new DomainError("Categoria de retirada inválida.", "INVALID_CATEGORY", "categoryId");
@@ -77,7 +82,7 @@ export async function registerWithdrawal(actor: Actor, input: WithdrawalInput): 
             notes: data.notes ?? null,
             balanceBefore: balanceBefore.toFixed(2),
             balanceAfter: balanceAfter.toFixed(2),
-            negativeBalanceJustification: balanceAfter.lessThan(0) ? data.negativeBalanceJustification ?? null : null,
+            negativeBalanceJustification: balanceAfter.lessThan(0) ? (data.negativeBalanceJustification ?? null) : null,
             idempotencyKey: data.idempotencyKey ?? null,
             createdById: actor.userId,
           },

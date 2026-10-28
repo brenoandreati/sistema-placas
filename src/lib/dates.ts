@@ -133,8 +133,7 @@ export function resolvePeriod(
 
   const start = startOfLocalDay(from, tz);
   const end = startOfLocalDay(addDaysToDateString(to, 1), tz);
-  const label =
-    preset === "custom" ? `${formatDateString(from)} a ${formatDateString(to)}` : PERIOD_LABELS[preset];
+  const label = preset === "custom" ? `${formatDateString(from)} a ${formatDateString(to)}` : PERIOD_LABELS[preset];
   return { preset, label, start, end, from, to };
 }
 
@@ -164,9 +163,7 @@ export function previousPeriod(period: Period, tz: string): Period {
 }
 
 export function periodLengthInDays(period: Pick<Period, "from" | "to">): number {
-  return (
-    differenceInCalendarDays(new Date(`${period.to}T00:00:00Z`), new Date(`${period.from}T00:00:00Z`)) + 1
-  );
+  return differenceInCalendarDays(new Date(`${period.to}T00:00:00Z`), new Date(`${period.from}T00:00:00Z`)) + 1;
 }
 
 /** Lista as chaves de agrupamento (dia ou mês) cobertas pelo período. */
