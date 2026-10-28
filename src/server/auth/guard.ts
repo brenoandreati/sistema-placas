@@ -22,7 +22,7 @@ export async function requirePageSession(permission?: Permission): Promise<Curre
 
 export async function clientIp(): Promise<string | null> {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+  return h.get("cf-connecting-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
 }
 
 /** Para server actions e route handlers: valida a sessão no servidor a cada chamada. */

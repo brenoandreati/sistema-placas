@@ -56,14 +56,26 @@ async function main() {
       await prisma.user.update({ where: { id: existing.id }, data: { passwordHash, active: true } });
       await prisma.session.deleteMany({ where: { userId: existing.id } });
       await prisma.auditLog.create({
-        data: { userId: existing.id, action: "user.password_reset", entityType: "user", entityId: existing.id, summary: "Senha redefinida pela linha de comando" },
+        data: {
+          userId: existing.id,
+          action: "user.password_reset",
+          entityType: "user",
+          entityId: existing.id,
+          summary: "Senha redefinida pela linha de comando",
+        },
       });
       console.log(`✔ Senha de ${email} redefinida. Sessões anteriores encerradas.`);
     } else {
       if (!name) throw new Error("Informe --name para criar um usuário.");
       const user = await prisma.user.create({ data: { email, name, role, passwordHash } });
       await prisma.auditLog.create({
-        data: { userId: user.id, action: "user.create", entityType: "user", entityId: user.id, summary: `Usuário ${email} (${role}) criado pela linha de comando` },
+        data: {
+          userId: user.id,
+          action: "user.create",
+          entityType: "user",
+          entityId: user.id,
+          summary: `Usuário ${email} (${role}) criado pela linha de comando`,
+        },
       });
       console.log(`✔ Usuário ${email} criado com papel ${role}.`);
     }

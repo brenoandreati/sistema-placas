@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Painel Placas NFC
 
-## Getting Started
+Sistema de gestão para o negócio de venda de placas NFC de avaliação do Google: estoque, vendas, clientes (mini-CRM),
+pagamentos, contas a receber, livro-caixa, retiradas e relatórios — com dados reais em PostgreSQL, regras financeiras
+auditáveis e interface responsiva.
 
-First, run the development server:
+| Área                 | O que faz                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**        | Saldo em caixa e placas disponíveis (posição atual); placas vendidas, valor bruto, recebido e lucro estimado por período; gráficos; alertas; atividades |
+| **Vendas**           | Cadastro rápido (cliente pode ser criado no próprio formulário), filtros, pagamentos parciais, estornos, cancelamento com devolução ao estoque          |
+| **Clientes**         | Busca, histórico de compras, financeiro, observações, dados do negócio, link de avaliações do Google, WhatsApp                                          |
+| **Estoque**          | Produtos, entradas (com custo médio ponderado), ajustes justificados, histórico de movimentações e de custos                                            |
+| **Financeiro**       | Posição atual × indicadores do período, livro-caixa com saldo acumulado, despesas, aportes, estornos compensatórios                                     |
+| **Contas a receber** | Vencidas, a vencer e sem vencimento; recebimento parcial ou total; link de cobrança pelo WhatsApp                                                       |
+| **Retiradas**        | Confirmação com saldo antes/depois, bloqueio de saldo negativo, categorias (pessoal × distribuição de lucros), estorno auditável                        |
+| **Relatórios**       | Vendas, estoque, clientes, financeiro e retiradas por período, com exportação CSV (padrão Excel pt-BR)                                                  |
+| **Configurações**    | Negócio, fuso, saldo inicial (com histórico), categorias, formas de pagamento, preferências, senha e log de auditoria                                   |
+
+## Stack
+
+- **Next.js 16** (App Router, Server Actions, `proxy.ts`) + **React 19** + **TypeScript**
+- **Tailwind CSS 4**, componentes próprios sobre **Radix UI**, ícones **Lucide**, gráficos **Recharts**
+- **PostgreSQL 16** + **Prisma 7** (driver adapter `pg`), valores em `NUMERIC`
+- **Zod 4** (validação compartilhada entre formulários e servidor)
+- Autenticação própria por sessão no banco (token com hash SHA-256, cookie `httpOnly`, bcrypt)
+- **Vitest** com testes de integração em PostgreSQL real
+- Deploy: Node.js (`next start`) ou **Cloudflare Workers** via OpenNext — veja [docs/DEPLOY-CLOUDFLARE.md](docs/DEPLOY-CLOUDFLARE.md)
+
+## Rodando localmente
+
+Pré-requisitos: Node.js 20.9+ (recomendado 22) e PostgreSQL 16 (ou Docker).
+
+```bash
+cp .env.example .env
+```
+
+Edite o `.env`: `DATABASE_URL`, `TEST_DATABASE_URL` e o administrador inicial (`ADMIN_EMAIL`, `ADMIN_PASSWORD`).
+
+```bash
+docker compose up -d
+```
+
+(O compose cria os bancos `placas_dev`, `placas_test` e `placas_demo`. Pule se já tiver um PostgreSQL.)
+
+```bash
+npm install
+```
+
+```bash
+npm run db:migrate
+```
+
+```bash
+npm run db:seed
+```
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse http://localhost:3000 e entre com o administrador do `.env`. No primeiro acesso o sistema pede a **configuração
+inicial**: nome do negócio, saldo inicial do caixa e o produto (preço, custo se conhecido e estoque inicial).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Atalho: a tecla **N** abre uma nova venda em qualquer tela.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Comando                                         | Descrição                                                         |
+| ----------------------------------------------- | ----------------------------------------------------------------- |
+| `npm run dev`                                   | Servidor de desenvolvimento                                       |
+| `npm run build` / `npm start`                   | Build e servidor de produção (Node.js)                            |
+| `npm test`                                      | Testes automatizados (usa `TEST_DATABASE_URL`, que é **apagado**) |
+| `npm run lint` / `typecheck` / `format`         | Qualidade de código                                               |
+| `npm run db:migrate`                            | Aplica as migrations (`prisma migrate deploy`)                    |
+| `npm run db:migrate:dev`                        | Cria uma nova migration a partir do `schema.prisma`               |
+| `npm run db:seed`                               | Dados de referência + administrador inicial (sem dados fictícios) |
+| `npm run db:demo`                               | Dados de demonstração **em banco separado** (`DEMO_DATABASE_URL`) |
+| `npm run user:create -- --email … --name …`     | Cria usuário (`--role`, `--reset` para redefinir senha)           |
+| `npm run backup`                                | Backup com `pg_dump` (+ checksum e retenção)                      |
+| `npm run cf:build` / `cf:preview` / `cf:deploy` | Build, teste local e deploy no Cloudflare Workers                 |
 
-To learn more about Next.js, take a look at the following resources:
+## Dados de demonstração
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Os dados reais nunca são misturados com dados de exemplo. Para apresentar o sistema com dados fictícios:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+DEMO_DATABASE_URL=postgresql://placas:placas@localhost:5432/placas_demo npm run db:demo
+```
 
-## Deploy on Vercel
+```bash
+DATABASE_URL=postgresql://placas:placas@localhost:5432/placas_demo npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Login da demonstração: `demo@placas.local` / `Demo@123456`. O script recusa bancos cujo nome não termine em `_demo`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Testes
+
+```bash
+npm test
+```
+
+32 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
+venda pendente, pagamento parcial, retirada, cancelamento, compra de estoque e consistência), além de concorrência
+(vendas e retiradas simultâneas), idempotência, estornos, imutabilidade no banco, duplicidade de clientes e cálculo de
+custo médio e lucro.
+
+## Documentação
+
+- [Regras de negócio e fórmulas](docs/REGRAS-DE-NEGOCIO.md)
+- [Arquitetura e decisões técnicas](docs/ARQUITETURA.md)
+- [Segurança, permissões e backup](docs/SEGURANCA-E-BACKUP.md)
+- [Deploy no Cloudflare Workers](docs/DEPLOY-CLOUDFLARE.md)

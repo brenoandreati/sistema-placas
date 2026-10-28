@@ -1,0 +1,36 @@
+# Deploy manual para o Cloudflare Workers.
+# Segredos necessários no repositório (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  – token com permissão "Workers Scripts: Edit"
+#   CLOUDFLARE_ACCOUNT_ID – ID da conta Cloudflare
+#   MIGRATION_DATABASE_URL – conexão direta (sem pooler) com o PostgreSQL de produção, para as migrations
+name: Deploy Cloudflare
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Migrations
+        run: npx prisma migrate deploy
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      - name: Build e deploy
+        run: npm run cf:deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

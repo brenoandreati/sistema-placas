@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sistema-placas",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "observability": { "enabled": true },
+  "vars": {
+    "SESSION_TTL_HOURS": "12",
+  },
+  // DATABASE_URL é um segredo: npx wrangler secret put DATABASE_URL
+}

@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Artefatos gerados.
+    ".open-next/**",
+    ".wrangler/**",
+    "src/generated/**",
+    "coverage/**",
   ]),
 ]);
 

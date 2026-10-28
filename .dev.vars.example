@@ -1,0 +1,2 @@
+# Variáveis para "npm run cf:preview" (wrangler dev). Copie para .dev.vars.
+DATABASE_URL=postgresql://placas:placas@localhost:5432/placas_dev

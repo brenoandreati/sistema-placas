@@ -9,7 +9,9 @@ import { execSync } from "node:child_process";
 
 const demoUrl = process.env.DEMO_DATABASE_URL;
 if (!demoUrl) {
-  console.error("✖ Defina DEMO_DATABASE_URL apontando para um banco exclusivo de demonstração (nome terminando em _demo).");
+  console.error(
+    "✖ Defina DEMO_DATABASE_URL apontando para um banco exclusivo de demonstração (nome terminando em _demo).",
+  );
   process.exit(1);
 }
 const dbName = new URL(demoUrl).pathname.replace(/^\//, "");
@@ -60,7 +62,7 @@ async function main() {
       seed = (seed * 1103515245 + 12345) % 2 ** 31;
       return seed / 2 ** 31;
     };
-    const pick = <T,>(items: T[]) => items[Math.floor(rand() * items.length)];
+    const pick = <T>(items: T[]) => items[Math.floor(rand() * items.length)];
     const daysAgo = (days: number, hour = 10 + Math.floor(rand() * 8)) => {
       const d = new Date(Date.now() - days * 86_400_000);
       d.setUTCHours(hour + 3, Math.floor(rand() * 60), 0, 0);
@@ -100,9 +102,35 @@ async function main() {
       active: true,
       initialQuantity: 0,
     });
-    await registerStockEntry(actor, { productId: product.id, quantity: 120, unitCostCents: 2150, entryDate: daysAgo(118), supplier: "Gráfica Acrílicos SP", documentNumber: "NF 1182", paidNow: true, paymentMethodId: await method("PIX") });
-    await registerStockEntry(actor, { productId: premium.id, quantity: 30, unitCostCents: 5200, entryDate: daysAgo(110), supplier: "Metalúrgica Inox", paidNow: true, paymentMethodId: await method("Transferência bancária") });
-    await registerStockEntry(actor, { productId: product.id, quantity: 80, unitCostCents: 2300, entryDate: daysAgo(45), supplier: "Gráfica Acrílicos SP", documentNumber: "NF 1440", paidNow: true, paymentMethodId: await method("PIX") });
+    await registerStockEntry(actor, {
+      productId: product.id,
+      quantity: 120,
+      unitCostCents: 2150,
+      entryDate: daysAgo(118),
+      supplier: "Gráfica Acrílicos SP",
+      documentNumber: "NF 1182",
+      paidNow: true,
+      paymentMethodId: await method("PIX"),
+    });
+    await registerStockEntry(actor, {
+      productId: premium.id,
+      quantity: 30,
+      unitCostCents: 5200,
+      entryDate: daysAgo(110),
+      supplier: "Metalúrgica Inox",
+      paidNow: true,
+      paymentMethodId: await method("Transferência bancária"),
+    });
+    await registerStockEntry(actor, {
+      productId: product.id,
+      quantity: 80,
+      unitCostCents: 2300,
+      entryDate: daysAgo(45),
+      supplier: "Gráfica Acrílicos SP",
+      documentNumber: "NF 1440",
+      paidNow: true,
+      paymentMethodId: await method("PIX"),
+    });
 
     const businesses = [
       ["Padaria Pão Dourado", "Maria Souza", "Padaria", "São Paulo", "SP"],
@@ -149,7 +177,18 @@ async function main() {
       const target = isPremium ? premium : product;
       const quantity = 1 + Math.floor(rand() * (isPremium ? 2 : 4));
       const roll = rand();
-      const status = day > 20 ? (roll < 0.82 ? "PAID" : roll < 0.92 ? "PARTIAL" : "PENDING") : roll < 0.55 ? "PAID" : roll < 0.75 ? "PARTIAL" : "PENDING";
+      const status =
+        day > 20
+          ? roll < 0.82
+            ? "PAID"
+            : roll < 0.92
+              ? "PARTIAL"
+              : "PENDING"
+          : roll < 0.55
+            ? "PAID"
+            : roll < 0.75
+              ? "PARTIAL"
+              : "PENDING";
       const price = Math.round(target.salePrice * 100);
       const total = quantity * price;
       try {
@@ -174,7 +213,12 @@ async function main() {
     for (const { sale, day } of sales.filter((s) => s.sale.paymentStatus !== "PAID" && s.day > 25).slice(0, 4)) {
       const fresh = await prisma.sale.findUniqueOrThrow({ where: { id: sale.id } });
       const pending = Math.round((Number(fresh.total) - Number(fresh.amountPaid)) * 100);
-      await registerPayment(actor, { saleId: sale.id, amountCents: pending, paymentMethodId: await method("PIX"), paidAt: daysAgo(day - 8) });
+      await registerPayment(actor, {
+        saleId: sale.id,
+        amountCents: pending,
+        paymentMethodId: await method("PIX"),
+        paidAt: daysAgo(day - 8),
+      });
     }
 
     // Um cancelamento com devolução ao estoque.
@@ -189,7 +233,13 @@ async function main() {
       });
     }
 
-    await adjustStock(actor, { productId: product.id, direction: "OUT", quantity: 2, reason: "Placas trincadas no transporte", occurredAt: daysAgo(40) });
+    await adjustStock(actor, {
+      productId: product.id,
+      direction: "OUT",
+      quantity: 2,
+      reason: "Placas trincadas no transporte",
+      occurredAt: daysAgo(40),
+    });
 
     for (const [days, cents, cat, desc] of [
       [95, 4500, "Frete", "Envio de placas (Correios)"],
@@ -200,15 +250,33 @@ async function main() {
       [20, 25000, "Publicidade", "Anúncios no Instagram"],
       [8, 3600, "Embalagens", "Caixas personalizadas"],
     ] as const) {
-      await registerExpense(actor, { amountCents: cents, incurredAt: daysAgo(days), categoryId: await category(cat), description: desc, paymentMethodId: await method("PIX") });
+      await registerExpense(actor, {
+        amountCents: cents,
+        incurredAt: daysAgo(days),
+        categoryId: await category(cat),
+        description: desc,
+        paymentMethodId: await method("PIX"),
+      });
     }
-    await registerIncome(actor, { kind: "CAPITAL_CONTRIBUTION", amountCents: 50000, occurredAt: daysAgo(60), categoryId: await category("Aporte de capital"), description: "Aporte para compra de estoque" });
+    await registerIncome(actor, {
+      kind: "CAPITAL_CONTRIBUTION",
+      amountCents: 50000,
+      occurredAt: daysAgo(60),
+      categoryId: await category("Aporte de capital"),
+      description: "Aporte para compra de estoque",
+    });
     for (const [days, cents, cat, desc] of [
       [62, 60000, "Retirada pessoal do proprietário", "Pró-labore"],
       [31, 60000, "Retirada pessoal do proprietário", "Pró-labore"],
       [3, 40000, "Distribuição de lucros", "Distribuição do trimestre"],
     ] as const) {
-      await registerWithdrawal(actor, { amountCents: cents, withdrawnAt: daysAgo(days), paymentMethodId: await method("Transferência bancária"), categoryId: await category(cat), description: desc });
+      await registerWithdrawal(actor, {
+        amountCents: cents,
+        withdrawnAt: daysAgo(days),
+        paymentMethodId: await method("Transferência bancária"),
+        categoryId: await category(cat),
+        description: desc,
+      });
     }
 
     console.log(`✔ Demonstração pronta em "${dbName}": ${sales.length} vendas, ${customers.length} clientes.`);

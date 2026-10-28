@@ -19,10 +19,14 @@
     "backup": "bash scripts/backup.sh",
     "postinstall": "prisma generate",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "cf:build": "CF_WORKERS_BUILD=1 opennextjs-cloudflare build",
+    "cf:preview": "npm run cf:build && opennextjs-cloudflare preview",
+    "cf:deploy": "npm run cf:build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
+    "@opennextjs/cloudflare": "^1.20.13",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "bcryptjs": "^3.0.3",
@@ -55,7 +59,8 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.154.0"
   },
   "engines": {
     "node": ">=20.9"

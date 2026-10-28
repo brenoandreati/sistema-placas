@@ -12,6 +12,14 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// Mesmo cliente compilado para o runtime do Cloudflare Workers (WASM importado como módulo).
+// Usado apenas no build do Cloudflare (npm run cf:build), via alias no next.config.ts.
+generator client_workerd {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-workerd"
+  runtime  = "workerd"
+}
+
 datasource db {
   provider = "postgresql"
 }

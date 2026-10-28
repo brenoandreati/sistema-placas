@@ -7,7 +7,8 @@ export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return Response.json({ status: "ok" });
-  } catch {
+  } catch (error) {
+    console.error("[health] falha ao consultar o banco", error);
     return Response.json({ status: "error" }, { status: 503 });
   }
 }
