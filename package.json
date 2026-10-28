@@ -22,7 +22,8 @@
     "format:check": "prettier --check .",
     "cf:build": "CF_WORKERS_BUILD=1 opennextjs-cloudflare build && node scripts/cf-strip-env.mjs",
     "cf:preview": "npm run cf:build && opennextjs-cloudflare preview",
-    "cf:deploy": "npm run cf:build && opennextjs-cloudflare deploy"
+    "cf:deploy": "npm run cf:build && opennextjs-cloudflare deploy",
+    "cf:link:deploy": "cd deploy/pages && wrangler pages deploy --branch main"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

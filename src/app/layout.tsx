@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: { default: "Painel Placas NFC", template: "%s · Painel Placas NFC" },
   description: "Gestão de estoque, vendas, clientes e caixa das placas NFC de avaliação.",
   robots: { index: false, follow: false },
+  applicationName: "Placas NFC",
+  // Aberto pela tela inicial do iPhone, roda em tela cheia como um app.
+  appleWebApp: { capable: true, title: "Placas NFC", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

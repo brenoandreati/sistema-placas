@@ -1,0 +1,10 @@
+{
+  // Endereço público do painel: https://brplacasnfc.pages.dev
+  // O projeto do Cloudflare Pages só repassa cada requisição ao Worker "sistema-placas" (o app de verdade, com
+  // banco e segredos) por um service binding. Assim o link não depende do subdomínio *.workers.dev da conta.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "brplacasnfc",
+  "pages_build_output_dir": "./public",
+  "compatibility_date": "2026-09-01",
+  "services": [{ "binding": "APP", "service": "sistema-placas" }],
+}
