@@ -1,7 +1,15 @@
 import { z } from "zod";
 
+/** Usuário (ex.: loja.placas): letras, números, ponto, hífen e sublinhado. */
+const USERNAME = /^[a-z0-9][a-z0-9._-]{2,63}$/;
+
+// O login aceita e-mail ou nome de usuário; ambos ficam na coluna users.email (única).
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email("Informe um e-mail válido.")),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine((v) => USERNAME.test(v) || z.email().safeParse(v).success, "Informe o usuário ou e-mail."),
   password: z.string().min(1, "Informe a senha.").max(200),
 });
 

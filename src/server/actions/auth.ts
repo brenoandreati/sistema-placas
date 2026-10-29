@@ -25,7 +25,7 @@ function safeNext(value: FormDataEntryValue | null): string {
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = loginSchema.safeParse({ email: formData.get("email"), password: formData.get("password") });
   const email = String(formData.get("email") ?? "");
-  if (!parsed.success) return { error: "Informe e-mail e senha válidos.", email };
+  if (!parsed.success) return { error: "Informe usuário e senha válidos.", email };
 
   const ip = await clientIp();
   const result = await verifyCredentials(parsed.data.email, parsed.data.password, ip);
@@ -35,7 +35,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
       error:
         result.reason === "rate_limited"
           ? "Muitas tentativas sem sucesso. Aguarde 15 minutos e tente novamente."
-          : "E-mail ou senha incorretos.",
+          : "Usuário ou senha incorretos.",
     };
   }
   await createSession(result.userId, { ipAddress: ip, userAgent: (await headers()).get("user-agent") });

@@ -2,7 +2,8 @@
 
 ## Autenticação
 
-- Login por e-mail e senha (bcrypt, custo 12). Política de senha: mínimo de 10 caracteres com letras e números.
+- Login por nome de usuário (ex.: `loja.placas`) ou e-mail, e senha (bcrypt, custo 12). Os dois ficam na coluna
+  única `users.email`. Política de senha: mínimo de 10 caracteres com letras e números.
 - Sessão no banco; o cookie `placas_session` é `httpOnly`, `SameSite=Lax` e `Secure` em produção. O banco guarda só o
   hash SHA-256 do token.
 - Expira após 12 h sem uso (`SESSION_TTL_HOURS`) e, no máximo, 7 dias após o login.
