@@ -153,6 +153,10 @@ avaliar, `https://search.google.com/local/writereview?placeid={Place ID}` (servi
 - **Links curtos** (`maps.app.goo.gl`, `goo.gl`, `g.co`, `g.page`, `share.google`): o servidor segue os
   redirecionamentos (até 6, com tempo limite) e só abre endereços desses domínios do Google. Links de busca ou de área
   do mapa, sem um negócio selecionado, são recusados com instruções.
+- **Links da Busca do Google** (`share.google/…`, compartilhados pela pesquisa): levam a uma página de resultados que
+  só traz a identificação da Busca (`kgmid`), não o lugar do Maps, e essa página só abre num navegador. Sem a API paga
+  do Google não há como converter: a tela reconhece o caso, mostra o nome pesquisado e oferece abrir o negócio no
+  Google Maps (`maps/search/?api=1&query=…`) para copiar o link certo. Nada é gravado no histórico.
 - **Histórico.** Cada link gerado fica guardado com o nome do negócio; gerar de novo o mesmo lugar atualiza o registro
   em vez de duplicar. Excluir do histórico não afeta placas e QR codes que já usam o link. Geração, atualização e
   exclusão são auditadas.

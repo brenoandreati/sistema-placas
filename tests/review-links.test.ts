@@ -9,6 +9,7 @@ import {
   generateReviewLink,
   listReviewLinks,
   resolveReviewLink,
+  SearchLinkError,
 } from "@/server/services/review-links";
 import { resetDatabase } from "./helpers";
 
@@ -123,6 +124,24 @@ describe("resolução do link colado", () => {
     await expectCode(resolveReviewLink("Padaria Pão Dourado", fetch), "INVALID_LINK");
     // Só links curtos do Google são abertos: nada de buscar endereços de fora.
     expect(fetch.mock.calls.map((c) => new URL(c[0]).hostname)).toEqual(["maps.app.goo.gl", "maps.app.goo.gl"]);
+  });
+
+  it("reconhece link da Busca do Google (share.google) e devolve o nome pesquisado", async () => {
+    // Caminho real de um link share.google (28/10/2026): passa por /share.google e termina numa pesquisa.
+    const fetch = fakeFetch({
+      "https://share.google/HlsiU0CI51OsIXTw6": "https://www.google.com/share.google?q=HlsiU0CI51OsIXTw6",
+      "https://www.google.com/share.google?q=HlsiU0CI51OsIXTw6":
+        "https://www.google.com/search?sca_esv=381dd&kgmid=/g/11btz1tyv9&q=Peso+Suplementos&source=sh/x/loc/uni/m1/1",
+    });
+    const error = await resolveReviewLink("https://share.google/HlsiU0CI51OsIXTw6", fetch).catch((e) => e);
+    expect(error).toBeInstanceOf(SearchLinkError);
+    expect(error).toMatchObject({ code: "SEARCH_LINK", query: "Peso Suplementos" });
+    // A página de pesquisa em si não é aberta (só funciona num navegador).
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    const direct = await resolveReviewLink("https://www.google.com/search?q=Padaria+Central", fetch).catch((e) => e);
+    expect(direct).toMatchObject({ code: "SEARCH_LINK", query: "Padaria Central" });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it("avisa quando o link não abre", async () => {

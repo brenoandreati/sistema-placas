@@ -102,7 +102,7 @@ Login da demonstração: `demo@placas.local` / `Demo@123456`. O script recusa ba
 npm test
 ```
 
-53 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
+54 testes de integração contra PostgreSQL real cobrem os cenários A–H do requisito (entrada de estoque, venda paga,
 venda pendente, pagamento parcial, retirada, cancelamento, compra de estoque e consistência), além de concorrência
 (vendas e retiradas simultâneas), idempotência, estornos, imutabilidade no banco, duplicidade de clientes, cálculo de
 custo médio e lucro e QR codes dinâmicos (geração em lote, troca de link, leitura pública) e geração do link de avaliação do Google.
