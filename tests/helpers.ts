@@ -14,6 +14,7 @@ const TABLES = [
   "audit_logs",
   "qr_codes",
   "qr_code_batches",
+  "review_links",
   "financial_transactions",
   "payments",
   "stock_movements",

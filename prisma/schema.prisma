@@ -277,6 +277,23 @@ model QrCode {
   @@map("qr_codes")
 }
 
+/// Link direto de avaliação do Google gerado a partir do link do negócio no Google Maps.
+model ReviewLink {
+  id           String   @id @default(uuid()) @db.Uuid
+  businessName String   @map("business_name")
+  /// Link colado (Google Maps, link curto de compartilhamento etc.).
+  sourceUrl    String   @map("source_url")
+  /// https://search.google.com/local/writereview?placeid=...
+  reviewUrl    String   @unique @map("review_url")
+  placeId      String?  @map("place_id")
+  createdById  String   @map("created_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("review_links")
+}
+
 // ───────────────────────────── Vendas e pagamentos ─────────────────────────────
 
 enum SaleStatus {

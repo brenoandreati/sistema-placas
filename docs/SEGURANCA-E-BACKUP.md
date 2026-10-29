@@ -28,6 +28,8 @@
   para destinos `http(s)` cadastrados por usuários com a permissão `qrcodes.write` (CHECK no banco impede
   `javascript:` e similares) e não expõe dados do sistema; a página de ativação só mostra o formulário a quem está
   logado com essa permissão.
+- O gerador de link de avaliação só abre (no servidor) links curtos de domínios do Google e só segue
+  redirecionamentos que continuem em domínios do Google, com tempo limite: não serve para buscar endereços arbitrários.
 - CSV protegido contra injeção de fórmulas.
 - Nenhum segredo no frontend; variáveis sensíveis apenas no servidor (`.env` ou segredos do provedor).
 
