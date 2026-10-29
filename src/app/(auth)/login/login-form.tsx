@@ -10,13 +10,16 @@ export function LoginForm({ next }: { next?: string }) {
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next ?? "/"} />
-      <Field label="E-mail">
+      <Field label="Usuário ou e-mail">
         {(p) => (
           <Input
             {...p}
             name="email"
-            type="email"
+            type="text"
             autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             required
             autoFocus
             defaultValue={state.email}
