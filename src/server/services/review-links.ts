@@ -2,8 +2,9 @@ import "server-only";
 import {
   directReviewUrl,
   extractFirstUrl,
+  googleSearchQuery,
   isGoogleHost,
-  isShortLinkHost,
+  isShortLink,
   placeIdFromUrl,
   reviewUrlForPlaceId,
 } from "@/lib/google-review";
@@ -19,6 +20,20 @@ const FETCH_TIMEOUT_MS = 8000;
 const NOT_FOUND_HELP =
   "Não encontrei o negócio nesse link. No Google Maps, abra a página do negócio, toque em Compartilhar e cole aqui o " +
   "link copiado (começa com https://maps.app.goo.gl/).";
+
+/**
+ * O link leva a uma pesquisa do Google (links share.google, compartilhados pela Busca), que não traz o lugar do Maps
+ * e só abre num navegador. Carrega o nome pesquisado para a tela oferecer a busca no Google Maps.
+ */
+export class SearchLinkError extends DomainError {
+  constructor(public readonly query: string) {
+    super(
+      (query ? `Esse link é da Busca do Google (“${query}”) e não traz o endereço do negócio no Maps. ` : "") +
+        "Abra o negócio no Google Maps, toque em Compartilhar → Copiar link e cole aqui.",
+      "SEARCH_LINK",
+    );
+  }
+}
 
 export interface ResolvedReviewLink {
   reviewUrl: string;
@@ -62,8 +77,10 @@ export async function resolveReviewLink(text: string, fetchImpl: FetchLike = fet
       url = new URL(next);
       continue;
     }
+    const query = googleSearchQuery(url);
+    if (query !== null) throw new SearchLinkError(query);
     // Só links curtos são abertos; um endereço completo sem o lugar não vai revelar mais nada.
-    if (!isShortLinkHost(url.hostname)) break;
+    if (!isShortLink(url)) break;
     let response: Response;
     try {
       response = await fetchImpl(url.href, {

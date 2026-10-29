@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, ExternalLink, RotateCcw, Star, Trash } from "lucide-react";
+import { Check, Copy, ExternalLink, MapPin, RotateCcw, Star, Trash } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { firstError, useServerAction } from "@/components/forms/use-action";
@@ -27,15 +27,22 @@ export function ReviewLinkGenerator() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [result, setResult] = useState<{ businessName: string; reviewUrl: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  // Link da Busca do Google (share.google): mostra o atalho para pegar o link certo no Google Maps.
+  const [searchHelp, setSearchHelp] = useState<{ query: string; mapsUrl: string | null } | null>(null);
   const { run, pending, fieldErrors } = useServerAction(generateReviewLinkAction);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    setSearchHelp(null);
     run(
       { businessName, sourceUrl },
       {
         successMessage: null,
         onSuccess: (link) => {
+          if (link.kind === "search") {
+            setSearchHelp({ query: link.query, mapsUrl: link.mapsUrl });
+            return;
+          }
           setResult({ businessName: link.businessName, reviewUrl: link.reviewUrl });
           setCopied(false);
           toast.success(link.alreadyExisted ? "Esse negócio já estava no histórico: link atualizado." : "Link gerado.");
@@ -46,6 +53,7 @@ export function ReviewLinkGenerator() {
 
   function reset() {
     setResult(null);
+    setSearchHelp(null);
     setBusinessName("");
     setSourceUrl("");
   }
@@ -123,6 +131,39 @@ export function ReviewLinkGenerator() {
             />
           )}
         </Field>
+        {searchHelp && (
+          <div role="status" className="flex flex-col gap-3 rounded-xl bg-warning-soft px-4 py-3.5 text-sm text-ink-2">
+            <p>
+              <span className="font-medium text-ink">Esse link é da Busca do Google</span>
+              {searchHelp.query ? ` (“${searchHelp.query}”)` : ""} e não traz o endereço do negócio no Maps. Pegue o
+              link certo em 3 passos:
+            </p>
+            <ol className="ml-5 list-decimal space-y-1">
+              <li>
+                {searchHelp.mapsUrl
+                  ? "Toque no botão abaixo para abrir o negócio no Google Maps."
+                  : "Abra o negócio no Google Maps."}
+              </li>
+              <li>
+                No Maps, toque em <span className="font-medium">Compartilhar → Copiar link</span>.
+              </li>
+              <li>Volte aqui, cole o link novo no campo acima e gere de novo.</li>
+            </ol>
+            {searchHelp.mapsUrl && (
+              <Button asChild variant="secondary" className="h-auto min-h-10 w-full py-2 whitespace-normal sm:w-fit">
+                <a
+                  href={searchHelp.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  // O campo fica limpo para colar o link do Maps ao voltar.
+                  onClick={() => setSourceUrl("")}
+                >
+                  <MapPin /> Abrir {searchHelp.query ? `“${searchHelp.query}”` : "o negócio"} no Google Maps
+                </a>
+              </Button>
+            )}
+          </div>
+        )}
         <Button type="submit" size="lg" loading={pending} className="sm:w-fit">
           <Star /> Gerar link de avaliação
         </Button>

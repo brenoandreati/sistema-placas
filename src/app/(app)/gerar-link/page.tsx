@@ -56,6 +56,10 @@ export default async function ReviewLinksPage({
               </p>
             </div>
             <p className="text-xs text-muted">
+              Link compartilhado pela <span className="font-medium">Busca do Google</span> (share.google/…) não traz o
+              endereço do negócio: o sistema mostra um atalho para abrir o negócio no Maps e copiar o link certo.
+            </p>
+            <p className="text-xs text-muted">
               Se o dono do negócio já tiver o link de “pedir avaliações” do Perfil da Empresa (g.page/r/…), pode colar
               ele também.
             </p>

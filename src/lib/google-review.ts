@@ -31,9 +31,28 @@ export function isGoogleHost(hostname: string): boolean {
   );
 }
 
-/** Links curtos que só revelam o lugar depois de seguir o redirecionamento. */
-export function isShortLinkHost(hostname: string): boolean {
-  return ["maps.app.goo.gl", "goo.gl", "g.co", "g.page", "share.google"].includes(hostname.toLowerCase());
+/** Links curtos que só revelam o destino depois de seguir o redirecionamento. */
+export function isShortLink(url: URL): boolean {
+  const host = url.hostname.toLowerCase();
+  // share.google passa por www.google.com/share.google?q=… antes de chegar ao destino.
+  return (
+    ["maps.app.goo.gl", "goo.gl", "g.co", "g.page", "share.google"].includes(host) ||
+    (isGoogleHost(host) && url.pathname === "/share.google")
+  );
+}
+
+/**
+ * Pesquisa do Google (destino dos links share.google, compartilhados pela Busca): devolve o termo pesquisado
+ * ("" se não houver); nulo se não for uma pesquisa. Esses links não trazem o lugar do Maps.
+ */
+export function googleSearchQuery(url: URL): string | null {
+  if (!isGoogleHost(url.hostname) || url.pathname !== "/search") return null;
+  return url.searchParams.get("q")?.trim() ?? "";
+}
+
+/** Pesquisa no Google Maps pelo nome (URL oficial do Maps; no celular abre o app). */
+export function mapsSearchUrl(query: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 function hexToLittleEndian(hex: string): number[] {
