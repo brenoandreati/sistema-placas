@@ -160,3 +160,36 @@ avaliar, `https://search.google.com/local/writereview?placeid={Place ID}` (servi
 - **Histórico.** Cada link gerado fica guardado com o nome do negócio; gerar de novo o mesmo lugar atualiza o registro
   em vez de duplicar. Excluir do histórico não afeta placas e QR codes que já usam o link. Geração, atualização e
   exclusão são auditadas.
+
+## Agenda de retornos
+
+Menu "Agenda de Retornos": quando voltar a falar com um cliente ou potencial cliente (visita, ligação, WhatsApp,
+proposta…). Serviço em `src/server/services/follow-ups.ts`, testes em `tests/follow-ups.test.ts`.
+
+- **Cliente.** Cada retorno é de um cliente cadastrado ou de um potencial cliente novo, cadastrado pela própria agenda
+  no cadastro de clientes, sem exigir venda. Nome do estabelecimento igual (sem diferenciar maiúsculas) ou telefone,
+  e-mail ou CNPJ já cadastrados são recusados com o nome do cliente existente. Assim nada é duplicado. Responsável e
+  telefone são copiados para o retorno e podem ser editados sem alterar o cadastro do cliente. Um cliente pode ter
+  quantos retornos forem necessários.
+- **Data e horário** no fuso do negócio (padrão `America/Sao_Paulo`), gravados em UTC. O horário é opcional.
+- **Status.** "Agendado" é o único pendente. Resultado (realizado, não conseguiu contato, sem interesse, venda
+  realizada), reagendamento e cancelamento encerram o retorno e preenchem a data de conclusão. O banco garante essa
+  coerência por CHECK: um retorno concluído nunca volta a aparecer como pendente.
+- **Atrasado** é o retorno pendente com data anterior a hoje. Continua visível (lista, Hoje, dashboard) até ser
+  resolvido.
+- **Reagendar** não apaga nada: o retorno atual fica como "Reagendado", com a data antiga, e um novo retorno é criado
+  na nova data, ligado ao anterior (`previous_id`). Em um retorno já resolvido, "Agendar próximo retorno" cria o
+  próximo sem mexer no resultado. Ao registrar o resultado também dá para já agendar o próximo contato.
+- **Venda realizada** não cria venda: a tela oferece um atalho para abrir o formulário de venda.
+- **Histórico.** Criação, edições (com os campos alterados), resultados, reagendamentos e cancelamentos ficam em
+  `follow_up_events`, imutável (trigger). Retornos não podem ser apagados (trigger). Tudo também vai para a
+  auditoria.
+- **Indicadores.** Hoje = pendentes com data de hoje. Próximos = pendentes a partir de amanhã. Atrasados = pendentes
+  com data passada. Concluídos = resolvidos (realizado, sem contato, sem interesse, venda) no período escolhido.
+- **Precisam de novo contato.** O último retorno do cliente terminou como "realizado" ou "não conseguiu contato", não
+  há retorno pendente e não houve venda depois. Aparece na agenda e na ficha do cliente.
+- **Integrações.** A ficha do cliente tem "Próximo contato" e a aba "Histórico de contatos", com "Agendar novo
+  retorno" já preenchido. A lista de clientes mostra o próximo retorno e filtra por "com / sem retorno agendado". O
+  dashboard tem um resumo compacto dos próximos retornos. O menu "Lançar" tem "Agendar retorno".
+- **WhatsApp e ligação** usam o telefone cadastrado, com código do país (55) para números brasileiros. Sem telefone,
+  nenhum botão aparece.

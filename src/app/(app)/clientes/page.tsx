@@ -8,7 +8,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ClearFilters, DateRangeFilter, FilterBar, SearchFilter, SelectFilter } from "@/components/ui/filters";
 import { Pagination } from "@/components/ui/pagination";
-import { addDaysToDate, formatDate, isDateString, startOfLocalDay } from "@/lib/dates";
+import { addDaysToDate, formatDate, isDateString, startOfLocalDay, toLocalDateString, todayString } from "@/lib/dates";
 import { formatBRL, formatInteger, formatPhone, whatsappLink } from "@/lib/format";
 import { requirePageSession } from "@/server/auth/guard";
 import { prisma } from "@/server/db";
@@ -29,6 +29,8 @@ export default async function CustomersPage({
   const tz = settings.timezone;
   const purchase = sp.compras === "com" ? "with" : sp.compras === "sem" ? "without" : "all";
   const sort = (["name", "recent", "total", "created"] as const).find((s) => s === sp.ordem) ?? "name";
+  const followUp = sp.retorno === "com" ? "scheduled" : sp.retorno === "sem" ? "none" : undefined;
+  const today = todayString(tz);
 
   const [result, totalCustomers] = await Promise.all([
     listCustomers({
@@ -37,6 +39,7 @@ export default async function CustomersPage({
       lastPurchaseFrom: isDateString(sp.de) ? startOfLocalDay(sp.de, tz) : undefined,
       lastPurchaseTo: isDateString(sp.ate) ? startOfLocalDay(addDaysToDate(sp.ate, 1), tz) : undefined,
       includeInactive: sp.inativos === "1",
+      followUp,
       sort,
       page: Number(sp.page) || 1,
       pageSize: settings.pageSize,
@@ -56,7 +59,7 @@ export default async function CustomersPage({
           search={
             <SearchFilter placeholder="Buscar por negócio, responsável, telefone ou e-mail" className="lg:w-80" />
           }
-          params={["q", "compras", "ordem", "inativos", "de", "ate"]}
+          params={["q", "compras", "retorno", "ordem", "inativos", "de", "ate"]}
         >
           <SelectFilter
             param="compras"
@@ -64,6 +67,14 @@ export default async function CustomersPage({
             options={[
               { value: "com", label: "Já compraram" },
               { value: "sem", label: "Sem compras" },
+            ]}
+          />
+          <SelectFilter
+            param="retorno"
+            label="Agenda: todos"
+            options={[
+              { value: "com", label: "Com retorno agendado" },
+              { value: "sem", label: "Sem retorno agendado" },
             ]}
           />
           <SelectFilter
@@ -82,7 +93,7 @@ export default async function CustomersPage({
           />
           <span className="text-xs text-muted">Última compra:</span>
           <DateRangeFilter />
-          <ClearFilters params={["q", "compras", "ordem", "inativos", "de", "ate"]} />
+          <ClearFilters params={["q", "compras", "retorno", "ordem", "inativos", "de", "ate"]} />
         </FilterBar>
         <DataTable<CustomerListItem>
           rows={result.items}
@@ -110,6 +121,7 @@ export default async function CustomersPage({
                     <span className="truncate">{c.businessName}</span>
                     {!c.active && <Badge tone="outline">desativado</Badge>}
                   </span>
+                  {c.nextFollowUpAt && <FollowUpBadge at={c.nextFollowUpAt} tz={tz} today={today} />}
                   <span className="block truncate text-xs text-muted">
                     {[c.city, c.state].filter(Boolean).join("/") || "—"}
                   </span>
@@ -179,6 +191,7 @@ export default async function CustomersPage({
             <Link href={`/clientes/${c.id}`} className="flex items-start justify-between gap-3">
               <span className="min-w-0">
                 <span className="block truncate font-medium text-ink">{c.businessName}</span>
+                {c.nextFollowUpAt && <FollowUpBadge at={c.nextFollowUpAt} tz={tz} today={today} />}
                 <span className="block truncate text-xs text-muted">
                   {c.contactName}
                   {c.phone ? ` · ${formatPhone(c.phone)}` : ""}
@@ -208,5 +221,16 @@ export default async function CustomersPage({
         />
       </Card>
     </div>
+  );
+}
+
+/** Retorno agendado na agenda: data do próximo contato (em vermelho se já passou). */
+function FollowUpBadge({ at, tz, today }: { at: string; tz: string; today: string }) {
+  const date = toLocalDateString(new Date(at), tz);
+  const overdue = date < today;
+  return (
+    <Badge tone={overdue ? "negative" : "primary"} dot className="mt-1 w-fit">
+      {overdue ? "Retorno atrasado" : date === today ? "Retorno hoje" : `Retorno ${formatDate(at, tz).slice(0, 5)}`}
+    </Badge>
   );
 }

@@ -1,6 +1,16 @@
 "use client";
 
-import { ChevronDown, LogOut, Menu, PackagePlus, Plus, ArrowUpRight, CircleMinus, KeyRound } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  Menu,
+  PackagePlus,
+  Plus,
+  ArrowUpRight,
+  CircleMinus,
+  KeyRound,
+  CalendarDays,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -129,6 +139,7 @@ function UserMenu({ user, compact }: { user: ShellProps["user"]; compact?: boole
 }
 
 const LAUNCH_ITEMS = [
+  { type: "follow-up", label: "Agendar retorno", icon: CalendarDays, permission: "followups.write" },
   { type: "stock-entry", label: "Entrada de estoque", icon: PackagePlus, permission: "inventory.write" },
   { type: "withdrawal", label: "Retirada de dinheiro", icon: ArrowUpRight, permission: "withdrawals.write" },
   { type: "expense", label: "Despesa", icon: CircleMinus, permission: "finance.write" },

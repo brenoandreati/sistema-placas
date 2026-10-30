@@ -41,6 +41,8 @@ async function main() {
   const { createSale, registerPayment, cancelSale } = await import("../src/server/services/sales");
   const { registerWithdrawal } = await import("../src/server/services/withdrawals");
   const { createQrBatch, getQrCodesForPrint, updateQrCode } = await import("../src/server/services/qr-codes");
+  const { createFollowUp, recordFollowUpResult } = await import("../src/server/services/follow-ups");
+  const { addDaysToDate, todayString } = await import("../src/lib/dates");
 
   try {
     if ((await prisma.sale.count()) > 0) {
@@ -291,6 +293,50 @@ async function main() {
         label: i % 2 === 0 ? "Balcão" : undefined,
       });
     }
+
+    // Agenda de retornos: um atrasado, dois para hoje, próximos, um potencial cliente e um contato já resolvido.
+    const today = todayString(tz);
+    const followUps: [number, number, string | undefined, "VISIT" | "CALL" | "WHATSAPP" | "PROPOSAL", string][] = [
+      [9, -2, "15:00", "VISIT", "Cliente demonstrou interesse, mas pediu para retornar depois"],
+      [10, 0, "09:30", "VISIT", "Cliente precisa conversar com sócio ou responsável"],
+      [11, 0, "16:00", "WHATSAPP", "Cliente pediu mais informações"],
+      [12, 2, undefined, "PROPOSAL", "Cliente quer analisar a proposta"],
+      [13, 6, "10:00", "CALL", "Cliente solicitou um prazo para decidir"],
+    ];
+    for (const [index, days, time, type, reason] of followUps) {
+      await createFollowUp(actor, {
+        customerMode: "existing",
+        customerId: customers[index].id,
+        date: addDaysToDate(today, days),
+        time,
+        type,
+        reason,
+      });
+    }
+    await createFollowUp(actor, {
+      customerMode: "new",
+      businessName: "Floricultura Jardim Secreto",
+      contactName: "Cláudia Ramos",
+      phone: "27998001122",
+      date: addDaysToDate(today, 1),
+      time: "11:00",
+      type: "VISIT",
+      reason: "Cliente demonstrou interesse, mas pediu para retornar depois",
+      notes: "Levar a placa de acrílico de amostra.",
+    });
+    const visited = await createFollowUp(actor, {
+      customerMode: "existing",
+      customerId: customers[14].id,
+      date: addDaysToDate(today, -1),
+      time: "14:00",
+      type: "VISIT",
+      reason: "Cliente pediu para entrar em contato novamente",
+    });
+    await recordFollowUpResult(actor, {
+      id: visited.id,
+      status: "DONE",
+      outcome: "Gostou da placa, mas pediu para retornar na próxima terça-feira para fechar.",
+    });
 
     console.log(`✔ Demonstração pronta em "${dbName}": ${sales.length} vendas, ${customers.length} clientes.`);
     console.log("  Para usar: DATABASE_URL=<DEMO_DATABASE_URL> npm run dev  ·  login demo@placas.local / Demo@123456");
