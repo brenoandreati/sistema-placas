@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,6 +16,7 @@ import { formatDateString, isPeriodPreset, previousPeriod, resolvePeriod } from 
 import { formatBRL, formatInteger, formatPercent, percentChange, pluralize } from "@/lib/format";
 import { requirePageSession } from "@/server/auth/guard";
 import { getAlerts } from "@/server/services/alerts";
+import { getUpcomingFollowUps } from "@/server/services/follow-ups";
 import { getInventoryOverview } from "@/server/services/inventory";
 import {
   getCashFlowMetrics,
@@ -44,20 +45,33 @@ export default async function DashboardPage({
   const period = resolvePeriod(preset, tz, { from: sp.de, to: sp.ate });
   const previous = previousPeriod(period, tz);
 
-  const [sales, salesPrev, cash, cashPrev, profit, profitPrev, position, series, alerts, activity, inventory] =
-    await Promise.all([
-      getSalesMetrics(period),
-      getSalesMetrics(previous),
-      getCashFlowMetrics(period),
-      getCashFlowMetrics(previous),
-      getProfitMetrics(period),
-      getProfitMetrics(previous),
-      getCurrentPosition(tz),
-      getTimeSeries(period, tz),
-      getAlerts(tz, settings.recentWithdrawalDays),
-      getRecentActivity(8),
-      getInventoryOverview(),
-    ]);
+  const [
+    sales,
+    salesPrev,
+    cash,
+    cashPrev,
+    profit,
+    profitPrev,
+    position,
+    series,
+    alerts,
+    activity,
+    inventory,
+    followUps,
+  ] = await Promise.all([
+    getSalesMetrics(period),
+    getSalesMetrics(previous),
+    getCashFlowMetrics(period),
+    getCashFlowMetrics(previous),
+    getProfitMetrics(period),
+    getProfitMetrics(previous),
+    getCurrentPosition(tz),
+    getTimeSeries(period, tz),
+    getAlerts(tz, settings.recentWithdrawalDays),
+    getRecentActivity(8),
+    getInventoryOverview(),
+    getUpcomingFollowUps(tz, 4),
+  ]);
 
   const minStockTotal = inventory.minStockTotal;
   const rangeLabel =
@@ -287,15 +301,71 @@ export default async function DashboardPage({
         <div className="min-w-0 xl:col-span-2">
           <SalesChart points={series.points} granularity={series.granularity} />
         </div>
-        <Card className="flex flex-col">
-          <CardHeader
-            title="Alertas"
-            description={
-              alerts.length ? pluralize(alerts.length, "item pede atenção", "itens pedem atenção") : undefined
-            }
-          />
-          <AlertsList alerts={alerts} />
-        </Card>
+        <div className="flex flex-col gap-4">
+          <Card className="flex flex-col">
+            <CardHeader
+              title="Alertas"
+              description={
+                alerts.length ? pluralize(alerts.length, "item pede atenção", "itens pedem atenção") : undefined
+              }
+            />
+            <AlertsList alerts={alerts} />
+          </Card>
+          <Card>
+            <CardHeader
+              title="Próximos retornos comerciais"
+              description={
+                [
+                  followUps.overdue ? pluralize(followUps.overdue, "atrasado", "atrasados") : null,
+                  followUps.today ? `${formatInteger(followUps.today)} hoje` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || undefined
+              }
+              action={
+                <Link href="/agenda" className="text-xs font-medium text-primary hover:underline">
+                  Abrir agenda
+                </Link>
+              }
+            />
+            {followUps.items.length === 0 ? (
+              <p className="flex items-center gap-2 px-5 pb-4 text-sm text-muted">
+                <CalendarDays className="size-4" /> Nenhum retorno agendado.
+              </p>
+            ) : (
+              <ul className="divide-y divide-line border-t border-line">
+                {followUps.items.map((f) => (
+                  <li key={f.id}>
+                    <Link
+                      href={
+                        f.date === followUps.todayDate
+                          ? "/agenda?visao=hoje"
+                          : `/agenda?visao=calendario&dia=${f.date}&data=${f.date}`
+                      }
+                      className="flex items-start gap-3 px-5 py-2.5 hover:bg-surface-2"
+                    >
+                      <span
+                        className={cn(
+                          "tabular w-14 shrink-0 text-[13px] font-medium",
+                          f.overdue ? "text-negative" : "text-ink",
+                        )}
+                      >
+                        {f.date === followUps.todayDate ? (f.time ?? "Hoje") : formatDateString(f.date).slice(0, 5)}
+                        {f.date !== followUps.todayDate && f.time && (
+                          <span className="block text-xs font-normal text-muted">{f.time}</span>
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-ink">{f.businessName}</span>
+                        <span className="block truncate text-xs text-muted">{f.reason}</span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

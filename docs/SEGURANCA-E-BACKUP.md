@@ -18,7 +18,7 @@
 - Server actions validam todos os dados com Zod no servidor; o navegador nunca envia totais calculados que sejam aceitos
   sem recálculo (o servidor recalcula subtotal, total e status).
 - Matriz de permissões em `src/server/auth/permissions.ts`. Papéis: `ADMIN` (tudo), `MANAGER` (operação e financeiro,
-  sem configurações), `OPERATOR` (vendas, clientes, estoque e QR codes), `VIEWER` (consulta).
+  sem configurações), `OPERATOR` (vendas, clientes, agenda de retornos, estoque e QR codes), `VIEWER` (consulta).
 
 ## Proteções adicionais
 

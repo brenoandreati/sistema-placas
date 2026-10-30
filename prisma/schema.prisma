@@ -226,8 +226,9 @@ model Customer {
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  sales   Sale[]
-  qrCodes QrCode[]
+  sales     Sale[]
+  qrCodes   QrCode[]
+  followUps FollowUp[]
 
   @@index([businessName])
   @@index([email])
@@ -292,6 +293,87 @@ model ReviewLink {
 
   @@index([createdAt])
   @@map("review_links")
+}
+
+// ───────────────────────────── Agenda de retornos ─────────────────────────────
+
+enum FollowUpType {
+  VISIT
+  CALL
+  WHATSAPP
+  PROPOSAL
+  AWAITING_REPLY
+  OTHER
+}
+
+/// SCHEDULED é o único status pendente; os demais encerram o retorno (completed_at preenchido).
+enum FollowUpStatus {
+  SCHEDULED
+  DONE
+  RESCHEDULED
+  NO_CONTACT
+  NOT_INTERESTED
+  SOLD
+  CANCELLED
+}
+
+/// Retorno comercial (visita, ligação, WhatsApp...) a um cliente ou potencial cliente.
+/// Nunca é apagado: reagendar encerra este registro como RESCHEDULED e cria o próximo, ligado por previous_id.
+model FollowUp {
+  id             String         @id @default(uuid()) @db.Uuid
+  customerId     String?        @map("customer_id") @db.Uuid
+  customer       Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  /// Cópia dos dados de contato no momento do agendamento (editáveis; o cadastro do cliente não muda).
+  businessName   String         @map("business_name")
+  contactName    String?        @map("contact_name")
+  phone          String?
+  /// Data e hora no fuso do negócio, gravadas em UTC. Sem horário definido: meia-noite local e has_time = false.
+  scheduledAt    DateTime       @map("scheduled_at") @db.Timestamptz(3)
+  hasTime        Boolean        @default(true) @map("has_time")
+  type           FollowUpType
+  reason         String
+  notes          String?
+  status         FollowUpStatus @default(SCHEDULED)
+  /// Resumo da conversa / resultado do contato.
+  outcome        String?
+  completedAt    DateTime?      @map("completed_at") @db.Timestamptz(3)
+  /// Retorno que originou este (reagendamento ou próximo contato).
+  previousId     String?        @map("previous_id") @db.Uuid
+  previous       FollowUp?      @relation("FollowUpChain", fields: [previousId], references: [id], onDelete: Restrict)
+  next           FollowUp[]     @relation("FollowUpChain")
+  idempotencyKey String?        @unique @map("idempotency_key")
+  createdById    String         @map("created_by_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  events FollowUpEvent[]
+
+  @@index([status, scheduledAt])
+  @@index([scheduledAt])
+  @@index([customerId])
+  @@index([previousId])
+  @@map("follow_ups")
+}
+
+/// Histórico imutável de cada retorno: criação, edições, resultados, reagendamentos e cancelamentos.
+model FollowUpEvent {
+  id              String          @id @default(uuid()) @db.Uuid
+  followUpId      String          @map("follow_up_id") @db.Uuid
+  followUp        FollowUp        @relation(fields: [followUpId], references: [id], onDelete: Restrict)
+  /// created | updated | result | rescheduled | next_scheduled | cancelled
+  action          String
+  fromStatus      FollowUpStatus? @map("from_status")
+  toStatus        FollowUpStatus? @map("to_status")
+  fromScheduledAt DateTime?       @map("from_scheduled_at") @db.Timestamptz(3)
+  toScheduledAt   DateTime?       @map("to_scheduled_at") @db.Timestamptz(3)
+  note            String?
+  /// Campos alterados em edições: { campo: [antes, depois] }.
+  changes         Json?
+  userId          String          @map("user_id") @db.Uuid
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([followUpId, createdAt])
+  @@map("follow_up_events")
 }
 
 // ───────────────────────────── Vendas e pagamentos ─────────────────────────────

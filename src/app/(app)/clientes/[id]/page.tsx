@@ -1,14 +1,27 @@
-import { ArrowLeft, ExternalLink, Mail, MessageCircle, Phone, Plus, QrCode, Star } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ExternalLink,
+  Mail,
+  MessageCircle,
+  Phone,
+  Plus,
+  QrCode,
+  Star,
+  TriangleAlert,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FollowUpActions, NewFollowUpButton } from "@/components/follow-ups/follow-up-actions";
 import { QuickActionButton } from "@/components/quick-actions";
-import { PaymentStatusBadge, SaleStatusBadge } from "@/components/status";
+import { FollowUpStatusBadge, PaymentStatusBadge, SaleStatusBadge } from "@/components/status";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkTabs } from "@/components/ui/link-tabs";
 import { cn } from "@/lib/cn";
+import { FOLLOW_UP_TYPE_LABELS } from "@/lib/follow-ups";
 import { formatDate, formatDateString, formatDateTime, todayString } from "@/lib/dates";
 import {
   formatBRL,
@@ -22,6 +35,7 @@ import {
 import { requirePageSession } from "@/server/auth/guard";
 import { can } from "@/server/auth/permissions";
 import { getCustomerDetail } from "@/server/services/customers";
+import { getCustomerFollowUps, type FollowUpView } from "@/server/services/follow-ups";
 import { listCustomerQrCodes } from "@/server/services/qr-codes";
 import { getSettingsView } from "@/server/services/settings";
 import { CustomerStatusButtons, EditCustomerButton } from "../customer-buttons";
@@ -31,6 +45,7 @@ export const metadata: Metadata = { title: "Cliente" };
 const TABS = [
   { key: "visao", label: "Visão geral" },
   { key: "compras", label: "Histórico de compras" },
+  { key: "contatos", label: "Histórico de contatos" },
   { key: "financeiro", label: "Financeiro" },
   { key: "observacoes", label: "Observações" },
   { key: "negocio", label: "Dados do negócio" },
@@ -49,13 +64,19 @@ export default async function CustomerDetailPage({
   if (!isUuid(id)) notFound();
   const settings = await getSettingsView();
   const tz = settings.timezone;
-  const [detail, qrCodes] = await Promise.all([getCustomerDetail(id), listCustomerQrCodes(id)]);
+  const [detail, qrCodes, contacts] = await Promise.all([
+    getCustomerDetail(id),
+    listCustomerQrCodes(id),
+    getCustomerFollowUps(id, tz),
+  ]);
   if (!detail) notFound();
   const { customer: c, summary } = detail;
   const tab = TABS.some((t) => t.key === aba) ? aba! : "visao";
   const wa = whatsappLink(c.whatsapp ?? c.phone);
   const today = todayString(tz);
   const canWrite = can(session.user.role, "customers.write");
+  const canFollowUp = can(session.user.role, "followups.write");
+  const whenText = (f: FollowUpView) => `${formatDateString(f.date)}${f.time ? ` às ${f.time}` : ""}`;
 
   const businessInfo: [string, React.ReactNode][] = [
     ["Razão social", c.legalName],
@@ -195,6 +216,46 @@ export default async function CustomerDetailPage({
             )}
           </Card>
           <div className="flex flex-col gap-5">
+            <Card>
+              <CardHeader
+                title="Próximo contato"
+                action={
+                  <Link
+                    className="text-xs font-medium text-primary hover:underline"
+                    href={`/clientes/${c.id}?aba=contatos`}
+                  >
+                    Histórico
+                  </Link>
+                }
+              />
+              <CardBody className="flex flex-col gap-3 text-sm">
+                {contacts.next ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className={cn("font-medium", contacts.next.overdue ? "text-negative" : "text-ink")}>
+                        {whenText(contacts.next)}
+                      </span>
+                      <FollowUpStatusBadge status={contacts.next.status} overdue={contacts.next.overdue} />
+                    </span>
+                    <span className="text-[13px] text-ink-2">
+                      {FOLLOW_UP_TYPE_LABELS[contacts.next.type]} · {contacts.next.reason}
+                    </span>
+                  </div>
+                ) : contacts.needsContact ? (
+                  <p className="flex gap-2 rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-ink-2">
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />A última conversa não teve desfecho
+                    e não há novo contato agendado.
+                  </p>
+                ) : (
+                  <p className="text-muted">Nenhum retorno agendado.</p>
+                )}
+                {canFollowUp && c.active && (
+                  <NewFollowUpButton customerId={c.id} variant="secondary" size="sm" className="w-fit">
+                    <CalendarDays /> Agendar novo retorno
+                  </NewFollowUpButton>
+                )}
+              </CardBody>
+            </Card>
             <Card>
               <CardHeader title="Avaliações do Google" />
               <CardBody className="flex flex-col gap-2 text-sm">
@@ -419,6 +480,68 @@ export default async function CustomerDetailPage({
             )}
           </Card>
         </div>
+      )}
+
+      {tab === "contatos" && (
+        <Card>
+          <CardHeader
+            title="Histórico de contatos"
+            description={
+              contacts.next
+                ? `Próximo contato: ${whenText(contacts.next)}`
+                : contacts.items.length
+                  ? "Nenhum retorno agendado no momento."
+                  : undefined
+            }
+            action={
+              canFollowUp && c.active ? (
+                <NewFollowUpButton customerId={c.id} size="sm">
+                  <Plus /> Agendar novo retorno
+                </NewFollowUpButton>
+              ) : undefined
+            }
+          />
+          {contacts.needsContact && (
+            <p className="mx-5 mb-4 flex gap-2 rounded-lg bg-warning-soft px-3 py-2 text-[13px] text-ink-2">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />A última conversa não teve desfecho e não
+              há novo contato agendado.
+            </p>
+          )}
+          {contacts.items.length === 0 ? (
+            <EmptyState
+              icon={<CalendarDays />}
+              title="Nenhum contato registrado"
+              description="Agende um retorno para acompanhar visitas, ligações e propostas com este cliente."
+            />
+          ) : (
+            <ol className="divide-y divide-line border-t border-line">
+              {contacts.items.map((f) => (
+                <li key={f.id} className={cn("flex gap-3 px-5 py-3.5", f.status !== "SCHEDULED" && "bg-surface-2/40")}>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className={cn("tabular text-sm font-medium", f.overdue ? "text-negative" : "text-ink")}>
+                        {whenText(f)}
+                      </span>
+                      <FollowUpStatusBadge status={f.status} overdue={f.overdue} />
+                      <span className="text-xs text-muted">{FOLLOW_UP_TYPE_LABELS[f.type]}</span>
+                    </span>
+                    <span className="mt-1 block text-[13px] text-ink-2">{f.reason}</span>
+                    {f.notes && (
+                      <span className="mt-0.5 block text-[13px] whitespace-pre-line text-muted">{f.notes}</span>
+                    )}
+                    {f.outcome && (
+                      <span className="mt-1 block rounded-lg bg-surface-2 px-3 py-1.5 text-[13px] whitespace-pre-line text-ink-2">
+                        {f.status === "RESCHEDULED" ? "Motivo do reagendamento: " : "Resultado: "}
+                        {f.outcome}
+                      </span>
+                    )}
+                  </span>
+                  <FollowUpActions followUp={f} canWrite={canFollowUp} today={today} tz={tz} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
       )}
 
       {tab === "observacoes" && (

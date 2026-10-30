@@ -15,8 +15,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   chamam o serviço e revalidam.
 - Dinheiro: `NUMERIC` no banco, `Prisma.Decimal` no servidor (`src/server/money.ts`), centavos inteiros no cliente.
   Nunca some valores monetários com `number`.
-- Registros financeiros, pagamentos, movimentações de estoque e auditoria são imutáveis (triggers). Correções = lançamento
-  compensatório. Toda operação crítica chama `audit()` na mesma transação.
+- Registros financeiros, pagamentos, movimentações de estoque, histórico de retornos (`follow_up_events`) e auditoria
+  são imutáveis (triggers). Correções = lançamento compensatório. Toda operação crítica chama `audit()` na mesma
+  transação.
 - Antes de concluir: `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 - **Várias sessões trabalham neste repositório.** O ramo padrão do GitHub (hoje `claude/practical-tesla-odjvjv`) é a
   versão oficial: tem tudo o que está no ar. Antes de começar qualquer alteração, e de novo antes de cada deploy, rode

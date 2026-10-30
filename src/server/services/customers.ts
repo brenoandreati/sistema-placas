@@ -114,17 +114,20 @@ async function assertNoDuplicate(tx: Tx, data: Pick<CustomerData, "cnpj" | "emai
 
 export async function createCustomer(actor: Actor, input: CustomerInput): Promise<CustomerView> {
   const data = customerSchema.parse(input);
-  return prisma.$transaction(async (tx) => {
-    await assertNoDuplicate(tx, data);
-    const customer = await tx.customer.create({ data: toDbData(data) });
-    await audit(tx, actor, {
-      action: "customer.create",
-      entityType: "customer",
-      entityId: customer.id,
-      summary: `Cliente ${customer.businessName} cadastrado`,
-    });
-    return toCustomerView(customer);
+  return prisma.$transaction(async (tx) => toCustomerView(await insertCustomer(tx, actor, data)));
+}
+
+/** Cadastra o cliente dentro de uma transação já aberta (também usado pela agenda de retornos). */
+export async function insertCustomer(tx: Tx, actor: Actor, data: CustomerData): Promise<Customer> {
+  await assertNoDuplicate(tx, data);
+  const customer = await tx.customer.create({ data: toDbData(data) });
+  await audit(tx, actor, {
+    action: "customer.create",
+    entityType: "customer",
+    entityId: customer.id,
+    summary: `Cliente ${customer.businessName} cadastrado`,
   });
+  return customer;
 }
 
 /** Cadastro mínimo feito durante o registro de uma venda. */
@@ -214,6 +217,8 @@ export interface CustomerListItem {
   totalPaid: number;
   pending: number;
   lastPurchaseAt: string | null;
+  /** Próximo retorno agendado (agenda de retornos), se houver. */
+  nextFollowUpAt: string | null;
   createdAt: string;
 }
 
@@ -223,6 +228,8 @@ export interface CustomerFilters extends PageParams {
   lastPurchaseFrom?: Date;
   lastPurchaseTo?: Date;
   includeInactive?: boolean;
+  /** Com ou sem retorno agendado na agenda de retornos. */
+  followUp?: "scheduled" | "none";
   sort?: "name" | "recent" | "total" | "created";
 }
 
@@ -242,6 +249,7 @@ interface CustomerRow {
   total_purchased: Prisma.Decimal | string | null;
   total_paid: Prisma.Decimal | string | null;
   last_purchase_at: Date | null;
+  next_follow_up_at: Date | null;
   full_count: bigint | number;
 }
 
@@ -265,6 +273,9 @@ export async function listCustomers(filters: CustomerFilters): Promise<Paginated
   if (filters.purchase === "without") conditions.push(Prisma.sql`COALESCE(s.orders, 0) = 0`);
   if (filters.lastPurchaseFrom) conditions.push(Prisma.sql`s.last_purchase_at >= ${filters.lastPurchaseFrom}`);
   if (filters.lastPurchaseTo) conditions.push(Prisma.sql`s.last_purchase_at < ${filters.lastPurchaseTo}`);
+  const scheduledFollowUp = Prisma.sql`EXISTS (SELECT 1 FROM follow_ups f WHERE f.customer_id = c.id AND f.status = 'SCHEDULED')`;
+  if (filters.followUp === "scheduled") conditions.push(scheduledFollowUp);
+  if (filters.followUp === "none") conditions.push(Prisma.sql`NOT ${scheduledFollowUp}`);
   const where = conditions.length ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}` : Prisma.empty;
 
   const orderBy = {
@@ -291,6 +302,8 @@ export async function listCustomers(filters: CustomerFilters): Promise<Paginated
            COALESCE(s.orders, 0) AS orders, COALESCE(s.units, 0) AS units,
            COALESCE(s.total_purchased, 0) AS total_purchased, COALESCE(s.total_paid, 0) AS total_paid,
            s.last_purchase_at,
+           (SELECT MIN(f.scheduled_at) FROM follow_ups f WHERE f.customer_id = c.id AND f.status = 'SCHEDULED')
+             AS next_follow_up_at,
            COUNT(*) OVER() AS full_count
       FROM customers c
       LEFT JOIN sale_stats s ON s.customer_id = c.id
@@ -319,6 +332,7 @@ export async function listCustomers(filters: CustomerFilters): Promise<Paginated
         totalPaid,
         pending: Math.max(0, Math.round((totalPurchased - totalPaid) * 100) / 100),
         lastPurchaseAt: r.last_purchase_at ? new Date(r.last_purchase_at).toISOString() : null,
+        nextFollowUpAt: r.next_follow_up_at ? new Date(r.next_follow_up_at).toISOString() : null,
         createdAt: new Date(r.created_at).toISOString(),
       };
     }),

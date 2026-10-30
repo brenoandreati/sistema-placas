@@ -2,6 +2,7 @@ import {
   ArrowUpRight,
   Boxes,
   CalendarClock,
+  CalendarDays,
   ChartColumn,
   LayoutDashboard,
   QrCode,
@@ -28,6 +29,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/vendas", label: "Vendas", icon: ReceiptText },
       { href: "/clientes", label: "Clientes", icon: Store },
+      { href: "/agenda", label: "Agenda de Retornos", icon: CalendarDays },
       { href: "/estoque", label: "Estoque de placas", icon: Boxes },
       { href: "/qr-codes", label: "QR codes", icon: QrCode },
       { href: "/gerar-link", label: "Gerar link", icon: Star },

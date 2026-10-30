@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { FinanceEntryDialog } from "@/components/forms/finance-entry-dialog";
+import { FollowUpDialog } from "@/components/forms/follow-up-dialog";
 import { SaleDialog } from "@/components/forms/sale-dialog";
 import { StockEntryDialog } from "@/components/forms/stock-entry-dialog";
 import { WithdrawalDialog } from "@/components/forms/withdrawal-dialog";
@@ -12,7 +13,8 @@ export type QuickAction =
   | { type: "stock-entry"; productId?: string }
   | { type: "withdrawal" }
   | { type: "expense"; saleId?: string }
-  | { type: "income" };
+  | { type: "income" }
+  | { type: "follow-up"; customerId?: string };
 
 const QuickActionsContext = createContext<{ open: (action: QuickAction) => void } | null>(null);
 
@@ -46,6 +48,11 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
         presetSaleId={action?.type === "expense" ? action.saleId : undefined}
       />
       <FinanceEntryDialog open={action?.type === "income"} onOpenChange={close} mode="income" />
+      <FollowUpDialog
+        open={action?.type === "follow-up"}
+        onOpenChange={close}
+        presetCustomerId={action?.type === "follow-up" ? action.customerId : undefined}
+      />
     </QuickActionsContext.Provider>
   );
 }
