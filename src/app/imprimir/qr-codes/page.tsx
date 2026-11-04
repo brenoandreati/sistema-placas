@@ -37,6 +37,8 @@ export default async function PrintQrCodesPage({
       baseUrl={baseUrl}
       initialSize={QR_PRINT_SIZES.find((s) => s === sp.tamanho) ?? "3"}
       initialShowText={sp.texto !== "0"}
+      cutFileName={code ? `qr-code-${code}` : `qr-codes-lote-${batchNumber}`}
+      cutTitle={title}
       notes={
         <>
           {!settings.qrBaseUrl && (
@@ -48,7 +50,9 @@ export default async function PrintQrCodesPage({
           )}
           <p className="text-xs text-muted">
             Na janela de impressão, use escala 100% (tamanho real). Para mandar à gráfica, escolha “Salvar como PDF”. As
-            linhas tracejadas são guias de corte.
+            linhas tracejadas são guias para cortar à mão. Para imprimir e cortar na Roland, use “Baixar PDF para
+            corte”: em volta de cada QR code vem uma linha contínua na cor CutContour, que o VersaWorks corta e não
+            imprime.
           </p>
         </>
       }
