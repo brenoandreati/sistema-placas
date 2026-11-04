@@ -1,11 +1,25 @@
 "use client";
 
+import { Scissors } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/form";
 import { cn } from "@/lib/cn";
 import { QR_PRINT_SIZES, qrPublicUrl, type QrPrintSize } from "@/lib/qr";
 import { drawQr } from "@/lib/qr-svg";
 
 const subscribeNoop = () => () => {};
+
+/** Folga até a linha de corte e espaço entre as peças no PDF para recorte, em mm. */
+const CUT_MARGIN_DEFAULT = 3;
+const CUT_GAP_DEFAULT = 13;
+
+function millimeters(value: string, fallback: number, max: number): number {
+  if (!value.trim()) return fallback;
+  const parsed = Number(value.replace(",", "."));
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.min(parsed, max) : fallback;
+}
 
 /**
  * Os QR codes são desenhados no navegador: no Cloudflare Workers cada requisição tem pouco tempo de CPU,
@@ -25,6 +39,8 @@ export function QrPrintSheet({
   baseUrl,
   initialSize,
   initialShowText,
+  cutFileName,
+  cutTitle,
   children,
   notes,
 }: {
@@ -32,6 +48,10 @@ export function QrPrintSheet({
   baseUrl: string;
   initialSize: QrPrintSize;
   initialShowText: boolean;
+  /** Nome do PDF para recorte, sem extensão (ex.: "qr-codes-lote-3"). */
+  cutFileName: string;
+  /** Título gravado no PDF para recorte (ex.: "Lote 3"). */
+  cutTitle: string;
   /** Topo do cabeçalho (título, botão de imprimir), renderizado no servidor. */
   children: React.ReactNode;
   /** Avisos exibidos abaixo das opções. */
@@ -45,6 +65,33 @@ export function QrPrintSheet({
     [isClient, codes, baseUrl],
   );
   const sideMm = Number(size) * 10;
+  const [cutMargin, setCutMargin] = useState(String(CUT_MARGIN_DEFAULT));
+  const [cutGap, setCutGap] = useState(String(CUT_GAP_DEFAULT));
+
+  // Gerado no navegador, como o desenho da folha; o gerador só carrega no clique.
+  async function downloadCutPdf() {
+    try {
+      const { qrCutSheetPdf } = await import("@/lib/qr-cut-pdf");
+      const pdf = qrCutSheetPdf(
+        codes.map((code) => ({ code, url: qrPublicUrl(baseUrl, code) })),
+        {
+          sizeMm: sideMm,
+          showText,
+          marginMm: millimeters(cutMargin, CUT_MARGIN_DEFAULT, 30),
+          gapMm: millimeters(cutGap, CUT_GAP_DEFAULT, 50),
+        },
+        `${cutTitle} - corte`,
+      );
+      const url = URL.createObjectURL(new Blob([pdf], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${cutFileName}-corte.pdf`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      toast.error("Não foi possível gerar o PDF. Tente novamente.");
+    }
+  }
 
   // Mantém a escolha no endereço (recarregar a página não perde o tamanho).
   function choose(next: { size?: QrPrintSize; showText?: boolean }) {
@@ -104,6 +151,34 @@ export function QrPrintSheet({
             >
               Ocultar
             </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface-2 px-3 py-2.5">
+            <span className="text-[13px] font-medium text-ink-2">Recorte na Roland (VersaWorks):</span>
+            <label className="flex items-center gap-1.5 text-[13px] text-muted">
+              Folga até o corte
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={cutMargin}
+                onChange={(e) => setCutMargin(e.target.value)}
+                className="h-8 w-14 px-2 text-center"
+              />
+              mm
+            </label>
+            <label className="flex items-center gap-1.5 text-[13px] text-muted">
+              Espaço entre as peças
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={cutGap}
+                onChange={(e) => setCutGap(e.target.value)}
+                className="h-8 w-14 px-2 text-center"
+              />
+              mm
+            </label>
+            <Button variant="secondary" size="sm" onClick={downloadCutPdf} disabled={!isClient}>
+              <Scissors /> Baixar PDF para corte
+            </Button>
           </div>
           {notes}
         </div>

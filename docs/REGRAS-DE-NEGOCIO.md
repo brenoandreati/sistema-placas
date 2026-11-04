@@ -138,6 +138,12 @@ cadastrado ou trocado a qualquer momento, sem reimprimir (serviço em `src/serve
 - **Impressão.** Folha A4 por lote ou por código avulso, em tamanho real (2 a 6 cm), com guias de corte e o código
   escrito embaixo. Também é possível baixar cada QR code em SVG para usar na arte da placa. Os QR codes são desenhados
   no navegador, nunca no servidor (veja o limite de CPU em [DEPLOY-CLOUDFLARE.md](DEPLOY-CLOUDFLARE.md)).
+- **Recorte na plotter.** "Baixar PDF para corte" gera um PDF vetorial A4 (`src/lib/qr-cut-pdf.ts`, testes em
+  `tests/qr-cut-pdf.test.ts`) para imprimir e cortar na Roland (VersaWorks): QR codes em preto (K 100%) e, em volta de
+  cada um, um quadrado contínuo de 0,25 pt na cor especial `CutContour` (sobreimpressão, exibida em magenta), que o
+  VersaWorks lê como caminho de corte e não imprime. Padrões: 3 mm de folga entre o QR code (com o código) e o corte e
+  13 mm entre as peças, ajustáveis na tela. A janela de impressão do navegador não gera cores especiais, por isso esse
+  PDF é montado à mão no navegador.
 - Geração de lote, cadastro, troca e remoção de link e mudança do domínio são auditados.
 
 ## Link de avaliação do Google
