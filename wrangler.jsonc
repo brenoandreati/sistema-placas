@@ -12,6 +12,9 @@
   // Executa o Worker perto do banco (Neon em São Paulo): cada requisição faz várias idas e voltas ao PostgreSQL.
   // Ajuste a região se o banco estiver em outro lugar.
   "placement": { "mode": "targeted", "region": "aws:sa-east-1" },
+  // Tempo de CPU por requisição. Exige o plano Workers Paid (no gratuito são 10 ms e as páginas caem com o Error 1102);
+  // 30 s é o padrão do Paid. As páginas usam 30–900 ms; o teto evita conta alta se algo entrar em laço.
+  "limits": { "cpu_ms": 30000 },
   "vars": {
     "SESSION_TTL_HOURS": "12",
   },
