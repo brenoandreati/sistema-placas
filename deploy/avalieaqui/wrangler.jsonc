@@ -1,0 +1,9 @@
+{
+  // Endereço gravado nos QR codes: https://avalieaqui.pages.dev (é o que o celular mostra ao escanear).
+  // Mesmo repassador de deploy/pages (mesmo _worker.js): cada requisição vai ao Worker "sistema-placas".
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "avalieaqui",
+  "pages_build_output_dir": "../pages/public",
+  "compatibility_date": "2026-09-01",
+  "services": [{ "binding": "APP", "service": "sistema-placas" }],
+}
