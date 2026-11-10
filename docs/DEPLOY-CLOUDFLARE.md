@@ -69,6 +69,12 @@ main --force`): sem o `--force`, o wrangler converte projetos novos em Workers, 
 conta. Com um domínio próprio, o melhor é ligá-lo direto ao Worker (Workers → sistema-placas → Domínios) e
 dispensar o projeto Pages.
 
+**Endereço dos QR codes (avalieaqui.pages.dev).** Desde 10/11/2026 os QR codes novos usam
+`https://avalieaqui.pages.dev` (é o nome que o celular mostra ao escanear). `deploy/avalieaqui/` é outro projeto
+Pages, com o mesmo `_worker.js` de `deploy/pages/`; para refazer o deploy: `cd deploy/avalieaqui && npx wrangler pages
+deploy --branch main`. Placas antigas usam `brplacasnfc.pages.dev` ou `sistema-placas.brenoandreati.workers.dev`:
+nenhum desses endereços pode ser apagado ou renomeado.
+
 ## Deploys seguintes
 
 ```bash
